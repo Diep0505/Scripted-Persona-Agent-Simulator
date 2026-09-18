@@ -1,11 +1,14 @@
 """
 app.py - Streamlit Dynamic UI cho Generic Markdown Scenario Engine
 
-Giao diện Web động:
-1. Tự động quét tất cả các file .md trong thư mục scenarios/ và hiển thị Dropdown trên Sidebar.
-2. Khi chuyển kịch bản hoặc nhấn "New Persona / Reset": tự động nạp kịch bản và sinh nhân vật mới (kèm bí mật ẩn tự động nếu có).
-3. Dynamic Action Bar: Render trực tiếp các nút bấm từ danh sách user_actions đọc được từ file .md.
-4. Xử lý ngắt hội thoại: Hiển thị banner kết thúc nếu state["conversation_end"] == True HOẶC turn >= scenario.completion_rules.max_turns.
+Giao diện Web động theo kiến trúc Realistic & Validated Persona Simulation:
+1. Tự động quét kịch bản (.md) từ thư mục scenarios/ và hiển thị Dropdown trên Sidebar.
+2. Hiển thị thông tin nhân khẩu học, loại hình tương tác (interaction_type), intent và chính sách hành vi.
+3. Dynamic Action Bar: Render trực tiếp các nút bấm từ danh sách user_actions trong .md file.
+4. Quản lý vòng đời hội thoại độc lập (Lifecycle State):
+   - ACTIVE / TRANSACTION_PENDING / COMPLETION_CANDIDATE / COMPLETED / MAX_TURNS_REACHED.
+   - Không ngắt vội khi khách hàng vừa đặt thêm câu hỏi sau thanh toán.
+5. Developer Trace & Debriefing: Hiển thị minh bạch lý do tiếp tục/ngắt hội thoại và các Context Facts.
 """
 
 import streamlit as st
@@ -13,6 +16,7 @@ import os
 from scenario_loader import load_scenario_from_md, list_available_scenarios
 from agent import ask_agent, reset_agent, create_agent_persona
 from state_machine import make_initial_state
+from models import ConversationLifecycleState
 
 st.set_page_config(page_title="Generic Scenario Engine", page_icon="🎭", layout="wide")
 
@@ -100,21 +104,28 @@ st.sidebar.write(f"**Tiêu đề:** {scenario.title}")
 st.sidebar.write(f"**Vai trò Agent:** `{scenario.role}`")
 st.sidebar.write(f"**Vai trò User:** `{scenario.user_role}`")
 st.sidebar.write(f"**Max Turns:** `{scenario.completion_rules.max_turns}`")
+if scenario.completion_rules.required_actions:
+    st.sidebar.write(f"**Hành động bắt buộc:** `{scenario.completion_rules.required_actions}`")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("👤 Hồ sơ Nhân vật (Persona)")
+st.sidebar.subheader("👤 Hồ sơ Nhân vật Thực tế")
 profile = st.session_state.current_profile
-st.sidebar.write(f"**Họ tên:** {profile.name}")
-st.sidebar.write(f"**Tuổi:** {profile.age}")
+st.sidebar.write(f"**Họ tên:** {profile.name} ({profile.age} tuổi)")
 st.sidebar.write(f"**Nghề nghiệp:** {profile.occupation}")
-st.sidebar.write(f"**Tính cách:** `{profile.personality}`")
+st.sidebar.write(f"**Loại hình tương tác:** `{profile.interaction_type}`")
+st.sidebar.write(f"**Ý định cốt lõi:** `{profile.intent}`")
+st.sidebar.write(f"**Tính cách:** {profile.personality}")
 st.sidebar.write(f"**Yêu cầu ban đầu:** {profile.chief_complaint}")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("📊 Điểm Cảm xúc (Emotion State)")
-st.sidebar.progress(hs["trust"] / 100, text=f"Tin tưởng (Trust): {hs['trust']}/100")
-st.sidebar.progress(hs["patience"] / 100, text=f"Kiên nhẫn (Patience): {hs['patience']}/100")
-st.sidebar.progress(hs["stress"] / 100, text=f"Căng thẳng (Stress): {hs['stress']}/100")
+st.sidebar.subheader("📊 Trạng thái Trải nghiệm & Vòng đời")
+lifecycle_val = hs.get("lifecycle_state", ConversationLifecycleState.ACTIVE.value)
+st.sidebar.info(f"**Vòng đời Hội thoại:** `{lifecycle_val}`")
+
+satisfaction_val = hs.get("satisfaction", 80)
+st.sidebar.progress(satisfaction_val / 100, text=f"⭐ Hài lòng (Satisfaction): {satisfaction_val}/100")
+st.sidebar.progress(hs.get("patience", 100) / 100, text=f"Kiên nhẫn (Patience): {hs.get('patience', 100)}/100")
+st.sidebar.progress(hs.get("stress", 10) / 100, text=f"Căng thẳng (Stress): {hs.get('stress', 10)}/100")
 
 # ---------------------------------------------------------------------------
 # 2. Hiển thị Khung Chat Lịch sử
@@ -143,19 +154,22 @@ if st.session_state.selected_action:
     st.info(f"Đã chọn Thao tác: **[{st.session_state.selected_action}]** (Sẽ gắn tag vào tin nhắn tiếp theo)")
 
 # ---------------------------------------------------------------------------
-# 4. Cầu chì Ngắt Hội thoại (Triple-Layer End Protocol)
+# 4. Cầu chì Ngắt Hội thoại Độc lập (Validated Termination Protocol)
 # ---------------------------------------------------------------------------
 current_turn = len([m for m in st.session_state.messages if m[0] == "user"])
 max_turns = scenario.completion_rules.max_turns
 is_max_turn_reached = current_turn >= max_turns
-is_conv_ended = hs.get("conversation_end", False) or is_max_turn_reached
+is_conv_ended = hs.get("end_validated", False) or (lifecycle_val in [ConversationLifecycleState.COMPLETED.value, ConversationLifecycleState.MAX_TURNS_REACHED.value]) or is_max_turn_reached
 
 if is_conv_ended:
     st.markdown("---")
-    if is_max_turn_reached and not hs.get("conversation_end", False):
-        st.warning(f"🛑 **Cuộc hội thoại đã ngắt do đạt ngưỡng tối đa {max_turns} turns (Max Turns Limit).**")
+    if is_max_turn_reached or lifecycle_val == ConversationLifecycleState.MAX_TURNS_REACHED.value:
+        st.warning(f"🛑 **Cuộc hội thoại đã ngắt do đạt ngưỡng tối đa {max_turns} turns (Max Turns Safety).**")
     else:
-        st.success("✅ **Cuộc hội thoại đã kết thúc thành công (Conversation Completed).**")
+        st.success("✅ **Cuộc hội thoại đã kết thúc thành công (Conversation Completed Trọn vẹn).**")
+
+    if hs.get("termination_reason"):
+        st.caption(f"Lý do: {hs.get('termination_reason')}")
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
@@ -168,7 +182,9 @@ if is_conv_ended:
             st.rerun()
     with col_btn2:
         if st.button("💬 Tiếp tục nhắn (Bỏ cờ kết thúc)", use_container_width=True):
+            hs["end_validated"] = False
             hs["conversation_end"] = False
+            hs["lifecycle_state"] = ConversationLifecycleState.ACTIVE.value
             st.rerun()
 
 # ---------------------------------------------------------------------------
@@ -180,7 +196,7 @@ if message:
     # Xử lý gắn tag Action
     if st.session_state.selected_action:
         user_display_text = f"[{st.session_state.selected_action}] {message}"
-        full_user_input = f"Action Tag: [{st.session_state.selected_action}]\n\nMessage:\n{message}"
+        full_user_input = f"[{st.session_state.selected_action}] {message}"
         st.session_state.selected_action = None
     else:
         user_display_text = message
@@ -214,22 +230,35 @@ if message:
     st.rerun()
 
 # ---------------------------------------------------------------------------
-# 6. Sidebar Expander: Debriefing (Sự thật ẩn) & Developer Logs
+# 6. Sidebar Expander: Debriefing (Sự thật bối cảnh) & Developer Logs
 # ---------------------------------------------------------------------------
-with st.sidebar.expander("🕵️ Xem Sự thật ẩn (Debriefing)"):
+with st.sidebar.expander("🕵️ Xem Bối cảnh Thực tế (Context Facts)"):
     st.write("**Mục tiêu cốt lõi:**", profile.goal)
-    st.write("**Bí mật / Sự thật ẩn (Sinh tự động / Cố định):**")
-    for s in profile.hidden_secrets:
-        st.write(f"- {s}")
+    st.write("**Bối cảnh thực tế / Yếu tố nguy cơ (Context Facts):**")
+    if profile.context_facts:
+        for f in profile.context_facts:
+            st.write(f"- **[{f.category}]** {f.information}")
+            if f.disclosure.when_asked_about:
+                st.caption(f"  _Hé lộ khi hỏi:_ {', '.join(f.disclosure.when_asked_about)}")
+    elif profile.hidden_secrets:
+        for s in profile.hidden_secrets:
+            st.write(f"- {s}")
+    else:
+        st.write("*(0 Context Fact - Không có yếu tố nguy cơ / Ca mua nhanh)*")
 
-with st.expander("🛠️ Developer Logs & Prompt Trace"):
+with st.expander("🛠️ Developer Logs & Lifecycle Trace"):
     if st.session_state.trace_logs:
         for log in st.session_state.trace_logs:
-            st.markdown(f"### 📍 Turn {log['turn']} - Stage: `{log['stage']}`")
+            st.markdown(f"### 📍 Turn {log.get('turn')} - Lifecycle: `{log.get('lifecycle_state')}`")
+            st.write(f"- **End Requested từ LLM:** `{log.get('end_requested')}`")
+            st.write(f"- **End Validated bởi Engine:** `{log.get('end_validated')}`")
+            st.write(f"- **Pending Question:** `{log.get('pending_question')}`")
+            st.write(f"- **Lý do:** {log.get('termination_reason')}")
+            st.write(f"- **Thao tác đã ghi nhận:** `{log.get('completed_actions')}`")
+            st.markdown("**Structured Output JSON:**")
+            st.json(log.get("json_response", {}))
             st.markdown("**System Prompt gửi tới Gemini:**")
-            st.code(log["prompt"], language="markdown")
-            st.markdown("**Structured Output JSON nhận từ Gemini:**")
-            st.json(log["json_response"])
+            st.code(log.get("prompt", ""), language="markdown")
             st.divider()
     else:
         st.info("Chưa có thông tin trace log. Gửi tin nhắn để bắt đầu xem prompt.")

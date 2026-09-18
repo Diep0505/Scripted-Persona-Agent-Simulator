@@ -2,14 +2,15 @@
 auto_test.py - Automated LLM-vs-LLM Simulation & QA Evaluation Framework
 
 Hệ thống Kiểm thử Tự động 2 AI (LLM-vs-LLM) cho Generic Markdown Scenario Engine:
-- Nạp kịch bản .md bất kỳ (ví dụ: scenarios/student_defense.md hoặc scenarios/patient_pharmacy.md).
-- AI 1 (Tester Agent): Đóng vai Tester, nạp system prompt từ scenario.test_config.tester_system_prompt và được phép chọn action từ user_actions.
-- Target Agent (Agent under test): Đóng vai Persona Agent, tự động sinh hidden_secrets nếu kịch bản quy định.
-- Cầu chì ngắt 3 lớp (Triple-Layer End Protocol):
-  1. Lớp 1: Target Agent trả về conversation_end = True.
-  2. Lớp 2: AI 1 (Tester) phát từ khóa ngắt trong completion_keywords ([DONE], [PASSED], [FAILED], [PAYMENT]).
-  3. Lớp 3: Số turn chạm ngưỡng max_turns của kịch bản.
-- AI 2 (Evaluator Agent): Đánh giá QA phiên thử nghiệm dựa trên evaluation_criteria từ .md và lưu kết quả JSON.
+- Nạp kịch bản .md bất kỳ (Y tế, BĐS, CSKH...).
+- AI 1 (Tester Agent): Đóng vai Tester/Chuyên viên, tuân thủ quy trình thực tế.
+- Target Agent (Persona Agent): Đóng vai khách hàng thực tế theo interaction_type, behavior_policy và context_facts.
+- Tự động chịu lỗi & thử lại với Exponential Backoff khi API quá tải (503 UNAVAILABLE / 429 RESOURCE_EXHAUSTED).
+- Cơ chế Ngắt Hội thoại Độc lập (Validated Termination Protocol):
+  1. Chỉ dừng khi Engine xác nhận `end_validated == True` (mục tiêu xong, không còn câu hỏi dở dang).
+  2. Không bao giờ ngắt cụt khi khách hàng vừa hỏi thêm câu hỏi sau thanh toán.
+  3. Cầu chì khẩn cấp: Ngắt an toàn khi chạm ngưỡng max_turns.
+- AI 2 (Evaluator Agent): Đánh giá QA toàn diện theo các chỉ số đo lường tính chân thực, tự nhiên và thời điểm kết thúc.
 """
 
 import os
@@ -21,10 +22,11 @@ from google import genai
 from google.genai import types
 
 from config import TEST_AGENT_API_KEY, TEST_AGENT_MODEL
-from models import ScenarioSchema, CharacterProfile, EvaluationReport
+from models import ScenarioSchema, CharacterProfile, EvaluationReport, ConversationLifecycleState
 from scenario_loader import load_scenario_from_md
 from agent import ask_agent, create_agent_persona
-from state_machine import make_initial_state, can_reveal_secret
+from gemini_api import generate_content_with_retry
+from state_machine import make_initial_state
 
 # Khởi tạo GenAI Client cho AI 1 (Tester) và AI 2 (Evaluator)
 client = genai.Client(api_key=TEST_AGENT_API_KEY)
@@ -36,7 +38,7 @@ client = genai.Client(api_key=TEST_AGENT_API_KEY)
 class PersonaAgentWrapper:
     """
     Wrapper adapter cho Agent cần kiểm thử.
-    Duy trì trạng thái cảm xúc (state) và lịch sử thoại cô lập hoàn toàn.
+    Duy trì trạng thái cảm xúc, vòng đời và lịch sử thoại cô lập hoàn toàn.
     """
 
     def __init__(self, scenario: ScenarioSchema):
@@ -50,7 +52,7 @@ class PersonaAgentWrapper:
         Thực thi 1 lượt phản hồi của Agent.
         """
         if action_tag and action_tag != "NONE":
-            full_user_input = f"Action Tag: [{action_tag}]\n\nMessage:\n{user_text}"
+            full_user_input = f"[{action_tag}] {user_text}"
         else:
             full_user_input = user_text
 
@@ -72,8 +74,12 @@ class PersonaAgentWrapper:
             "trust": self.state.get("trust", 50),
             "patience": self.state.get("patience", 100),
             "stress": self.state.get("stress", 10),
-            "conversation_end": self.state.get("conversation_end", False),
-            "hidden_info_unlocked": can_reveal_secret(self.state),
+            "satisfaction": self.state.get("satisfaction", 80),
+            "lifecycle_state": self.state.get("lifecycle_state", ConversationLifecycleState.ACTIVE.value),
+            "end_requested": trace_info.get("end_requested", False),
+            "end_validated": trace_info.get("end_validated", False),
+            "pending_question": trace_info.get("pending_question", False),
+            "termination_reason": trace_info.get("termination_reason", ""),
             "trace_info": trace_info
         }
 
@@ -83,7 +89,7 @@ class PersonaAgentWrapper:
 
 
 # ===========================================================================
-# 2. AI 1: Tester Agent (Giả lập Người dùng / Giám khảo / Dược sĩ)
+# 2. AI 1: Tester Agent (Giả lập Người dùng / Chuyên gia / Dược sĩ)
 # ===========================================================================
 def run_tester_agent(scenario: ScenarioSchema, history_logs: List[Dict[str, Any]], current_turn: int) -> Dict[str, str]:
     """
@@ -97,7 +103,7 @@ def run_tester_agent(scenario: ScenarioSchema, history_logs: List[Dict[str, Any]
 Bạn là AI 1 đóng vai trò kiểm thử: {test_config.tester_role}.
 Bạn đang tương tác với: {scenario.role}.
 
---- HƯỚNG DẪN VÀI TRÒ TESTER ---
+--- HƯỚNG DẪN VAI TRÒ TESTER ---
 {test_config.tester_system_prompt}
 
 --- CÁC THAO TÁC (ACTIONS) BẠN CÓ THỂ CHỌN ---
@@ -111,9 +117,12 @@ Bạn đang tương tác với: {scenario.role}.
 
 --- ĐỊNH DẠNG ĐẦU RA BẮT BUỘC ---
 ACTION: <MÃ_TAG_HÀNH_ĐỘNG> (Phải là một trong: {', '.join(valid_actions)})
-SAY: <Lời nói của bạn (1-2 câu ngắn gọn)>
+SAY: <Lời nói của bạn (1-2 câu ngắn gọn, đời thường, không giải thích dài dòng)>
 
-Lưu ý: Khi bạn nhận thấy mục tiêu giao tiếp đã xong (hoặc đã ra quyết định kết thúc), hãy đưa một trong các từ khóa kết thúc {scenario.completion_rules.completion_keywords} vào phần SAY.
+--- QUY TẮC QUAN TRỌNG VỀ TỪ KHÓA KẾT THÚC & CÂU HỎI PHÁT SINH ---
+1. TUYỆT ĐỐI KHÔNG đưa từ khóa kết thúc {scenario.completion_rules.completion_keywords} vào khi bạn ĐANG ĐẶT CÂU HỎI hoặc đang chờ khách hàng phản hồi.
+2. Nếu khách hàng đặt thêm câu hỏi (kể cả sau khi đã nhận đồ/thanh toán), BẠN BẮT BUỘC PHẢI TRẢ LỜI câu hỏi đó một cách chu đáo, ngắn gọn 1 câu (ACTION: NONE).
+3. Chỉ gắn tag hoàn tất khi mọi thắc mắc của khách đã được giải đáp và hai bên sẵn sàng chào tạm biệt.
 """
 
     dialogue_history = []
@@ -123,16 +132,18 @@ Lưu ý: Khi bạn nhận thấy mục tiêu giao tiếp đã xong (hoặc đã 
         dialogue_history.append(f"{scenario.role}: {log['target_said']}")
 
     if current_turn == 0:
-        user_prompt = "Hãy bắt đầu buổi tương tác bằng lời chào và yêu cầu đầu tiên. ACTION chọn NONE."
+        user_prompt = "Hãy bắt đầu buổi tương tác bằng lời chào khách hàng ngắn gọn (1 câu) và hỏi nhu cầu cần hỗ trợ gì. ACTION chọn NONE."
     else:
         user_prompt = f"""
 Lịch sử hội thoại gần đây:
 {chr(10).join(dialogue_history[-6:])}
 
 Hãy tạo lượt thoại tiếp theo (Chọn 1 ACTION phù hợp và phát biểu trong SAY).
+Nếu khách hàng vừa hỏi thêm câu hỏi, hãy trả lời thẳng thắn câu hỏi đó.
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
+        client=client,
         model=TEST_AGENT_MODEL,
         contents=f"{tester_system_prompt}\n\nNhiệm vụ:\n{user_prompt}",
         config=types.GenerateContentConfig(
@@ -170,30 +181,42 @@ def _parse_tester_output(raw_text: str, valid_actions: List[str]) -> Dict[str, s
 
 
 # ===========================================================================
-# 3. AI 2: QA Evaluator (Đánh giá chất lượng phiên giả lập)
+# 3. AI 2: QA Evaluator (Đánh giá Chân thực & Tự nhiên)
 # ===========================================================================
 def run_evaluator(scenario: ScenarioSchema, conversation_logs: List[Dict[str, Any]], target_profile: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Gửi toàn bộ nhật ký cuộc hội thoại tới AI 2 để chấm điểm theo criteria trong .md file.
+    Gửi toàn bộ nhật ký cuộc hội thoại tới AI 2 để chấm điểm theo các chỉ số đo lường tính chân thực.
     """
     eval_criteria_str = "\n".join([f"- {c}" for c in scenario.test_config.evaluation_criteria])
     logs_json = json.dumps(conversation_logs, indent=2, ensure_ascii=False)
     profile_json = json.dumps(target_profile, indent=2, ensure_ascii=False)
 
     evaluator_system_prompt = f"""
-Bạn là AI 2 - Chuyên gia Đánh giá Kiểm thử (QA & Educational Evaluator).
-Nhiệm vụ của bạn là phân tích toàn bộ nhật ký hội thoại giả lập và hồ sơ nhân vật để đánh giá chất lượng.
+Bạn là AI 2 - Chuyên gia Đánh giá Thực tế & Chất lượng Giao tiếp (Communication Realism & Termination Evaluator).
+Nhiệm vụ của bạn là phân tích toàn bộ nhật ký hội thoại giả lập và hồ sơ nhân vật để đánh giá chất lượng phiên tương tác.
 
---- TIÊU CHÍ ĐÁNH GIÁ (EVALUATION CRITERIA) ---
+CÂU HỎI TIÊU CHUẨN CỐT LÕI:
+"Nếu cuộc trò chuyện này diễn ra giữa 2 con người thật ngoài đời trong hoàn cảnh này, nó có tự nhiên, hợp lý và đáng tin không?"
+
+--- TIÊU CHÍ ĐÁNH GIÁ TỪ KỊCH BẢN ---
 {eval_criteria_str}
 
-Báo cáo phải gồm các trường:
-- out_of_character (bool): True nếu Agent đóng sai vai hoặc vi phạm nguyên tắc persona.
-- emotion_logic_score (int 1-10): Điểm số đánh giá tính logic khi biến đổi cảm xúc (Trust/Patience/Stress).
-- unlock_turn (int): Chỉ số lượt thoại (0-indexed) mà bí mật ẩn được tiết lộ (-1 nếu không bao giờ tiết lộ).
-- critique (str): Nhận xét chi tiết chuyên sâu bằng Tiếng Việt.
+--- CÁC CHỈ SỐ BẮT BUỘC ĐÁNH GIÁ (Thang điểm 1-10) ---
+- out_of_character (bool): True nếu vi phạm vai diễn, nói văn mẫu sáo rỗng, hoặc nói dài quá 5 câu.
+- dialogue_naturalness (int 1-10): Độ tự nhiên, đời thường, dân dã của câu từ (trừ điểm nếu nói như sách giáo khoa, kịch tính hóa giả tạo).
+- interaction_realism (int 1-10): Tính hợp lý của phản ứng hai bên trong đời thực.
+- information_timing (int 1-10): Thời điểm chia sẻ thông tin (trừ điểm nặng nếu tự xả thông tin bối cảnh khi chưa ai hỏi, cộng điểm nếu trả lời đúng lúc khi được hỏi).
+- behavior_consistency (int 1-10): Tính nhất quán của hành vi so với loại hình tương tác.
+- transaction_realism (int 1-10): Quy trình cấp hàng/dịch vụ/thanh toán có hợp lý không.
+- termination_correctness (int 1-10): Kết thúc đúng lúc (10 điểm nếu kết thúc trọn vẹn sau khi hết thắc mắc; trừ điểm nặng nếu ngắt vội khi còn câu hỏi dở dang hoặc kéo dài lê thê vô ích).
+- unnecessary_turns (int): Số lượt thoại thừa thãi (0 nếu tối ưu).
+- premature_termination (bool): True nếu hội thoại bị ngắt sớm khi còn thắc mắc hoặc giao dịch chưa xong.
+- abrupt_cutoff (bool): True nếu bị ngắt cụt lủn, thiếu tự nhiên.
+- emotion_logic_score (int 1-10): Tính logic khi biến đổi cảm xúc (hài lòng/kiên nhẫn/căng thẳng).
+- unlock_turn (int): Lượt thoại đầu tiên chia sẻ bối cảnh/nguy cơ (-1 nếu không có nguy cơ hoặc không chia sẻ).
+- critique (str): Nhận xét chi tiết bằng Tiếng Việt.
 
-BẮT BUỘC trả về kết quả định dạng JSON.
+BẮT BUỘC trả về kết quả định dạng JSON tuân thủ EvaluationReport schema.
 """
 
     eval_prompt = f"""
@@ -206,7 +229,8 @@ Nhật ký Mô phỏng Hội thoại:
 Hãy chấm điểm phiên mô phỏng.
 """
 
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
+        client=client,
         model=TEST_AGENT_MODEL,
         contents=f"{evaluator_system_prompt}\n\n{eval_prompt}",
         config=types.GenerateContentConfig(
@@ -220,14 +244,14 @@ Hãy chấm điểm phiên mô phỏng.
 
 
 # ===========================================================================
-# 4. Thực thi Mô phỏng & Cầu chì ngắt 3 lớp (Triple-Layer End Protocol)
+# 4. Thực thi Mô phỏng với Engine Termination Validator
 # ===========================================================================
 def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", report_path: str = "test_report.json") -> Dict[str, Any]:
     """
-    Thực thi vòng lặp test tự động LLM-vs-LLM với Cầu chì ngắt 3 lớp (Triple-Layer End Protocol).
+    Thực thi vòng lặp test tự động LLM-vs-LLM với cơ chế kết thúc được thẩm định độc lập.
     """
     print("=" * 70)
-    print("🤖 STARTING AUTOMATED LLM-VS-LLM TEST (GENERIC SCENARIO ENGINE)")
+    print("🤖 STARTING AUTOMATED LLM-VS-LLM TEST (REALISTIC PERSONA ENGINE)")
     print("=" * 70)
 
     # 1. Nạp kịch bản
@@ -235,7 +259,7 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
     print(f"📖 Loaded Scenario: '{scenario.title}' from '{scenario_path}'")
     print(f"   Agent Role: {scenario.role} | Tester Role: {scenario.test_config.tester_role}")
     print(f"   Max Turns Limit: {scenario.completion_rules.max_turns}")
-    print(f"   Completion Keywords: {scenario.completion_rules.completion_keywords}")
+    print(f"   Required Actions: {scenario.completion_rules.required_actions}")
     print("-" * 70)
 
     # 2. Khởi tạo Agent kiểm thử
@@ -243,17 +267,15 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
     profile = target_agent.get_profile()
 
     print(f"👤 Generated Persona Profile:")
-    print(f"   Name: {profile.get('name')}")
-    print(f"   Age: {profile.get('age')}")
-    print(f"   Occupation: {profile.get('occupation')}")
+    print(f"   Name: {profile.get('name')} | Age: {profile.get('age')} | Job: {profile.get('occupation')}")
+    print(f"   Interaction Type: {profile.get('interaction_type')} | Intent: {profile.get('intent')}")
     print(f"   Personality: {profile.get('personality')}")
     print(f"   Chief Complaint: {profile.get('chief_complaint')}")
-    print(f"   Hidden Secrets (Dynamic/Static): {profile.get('hidden_secrets')}")
+    print(f"   Context Facts: {len(profile.get('context_facts', []))} items: {[f.get('information') for f in profile.get('context_facts', [])]}")
     print("-" * 70)
 
     conversation_logs = []
     max_turns = scenario.completion_rules.max_turns
-    completion_keywords = scenario.completion_rules.completion_keywords
     unlock_turn_detected = -1
 
     for turn in range(max_turns):
@@ -273,17 +295,20 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
         trust = target_res["trust"]
         patience = target_res["patience"]
         stress = target_res["stress"]
-        hidden_unlocked = target_res["hidden_info_unlocked"]
-        agent_ended = target_res["conversation_end"]
+        satisfaction = target_res.get("satisfaction", 80)
+        end_requested = target_res["end_requested"]
+        end_validated = target_res["end_validated"]
+        pending_q = target_res["pending_question"]
+        lifecycle = target_res["lifecycle_state"]
+        term_reason = target_res["termination_reason"]
 
         print(f"🧑 {scenario.role}: {target_said}")
-        print(f"   📊 Trust: {trust}/100 | Patience: {patience}/100 | Stress: {stress}/100 | Secret Unlocked: {hidden_unlocked}")
+        print(f"   📊 Satisfaction: {satisfaction}/100 | Patience: {patience}/100 | Stress: {stress}/100")
+        print(f"   ⚙️ Lifecycle: {lifecycle} | End Requested: {end_requested} | End Validated: {end_validated} | Pending Q: {pending_q}")
 
-        if hidden_unlocked and unlock_turn_detected == -1:
+        # Ghi nhận thời điểm chia sẻ bối cảnh
+        if len(target_agent.state.get("context_facts_disclosed", [])) > 0 and unlock_turn_detected == -1:
             unlock_turn_detected = turn
-
-        # Kiểm tra từ khóa ngắt trong câu nói của Tester
-        tester_signalled_end = any(kw.lower() in tester_said.lower() for kw in completion_keywords) or tester_action in completion_keywords
 
         conversation_logs.append({
             "turn": turn,
@@ -293,25 +318,20 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
             "trust": trust,
             "patience": patience,
             "stress": stress,
-            "hidden_unlocked": hidden_unlocked,
-            "agent_conversation_end": agent_ended,
-            "tester_signalled_end": tester_signalled_end
+            "satisfaction": satisfaction,
+            "lifecycle_state": lifecycle,
+            "end_requested": end_requested,
+            "end_validated": end_validated,
+            "pending_question": pending_q,
+            "termination_reason": term_reason
         })
 
-        # --- CẦU CHÌ NGẮT 3 LỚP (TRIPLE-LAYER END PROTOCOL) ---
-        # Lớp 1: Target Agent trả về conversation_end = True
-        if agent_ended:
-            print("\n🏁 [LAYER 1 END]: Target Agent returned conversation_end=True. Stopping simulation.")
-            break
-
-        # Lớp 2: Tester phát tín hiệu ngắt (nằm trong completion_keywords hoặc Action tag)
-        if tester_signalled_end:
-            print(f"\n🏁 [LAYER 2 END]: Tester emitted completion keyword/action. Stopping simulation.")
-            break
-
-        # Lớp 3: Tự động ngắt khi hết loop (turn == max_turns - 1)
-        if turn == max_turns - 1:
-            print(f"\n🛑 [LAYER 3 END]: Reached max_turns limit ({max_turns}). Circuit breaker triggered.")
+        # --- KIỂM TRA ĐIỀU KIỆN KẾT THÚC HỘI THOẠI ĐÃ ĐƯỢC XÁC THỰC ---
+        if end_validated:
+            if lifecycle == ConversationLifecycleState.MAX_TURNS_REACHED.value:
+                print(f"\n🛑 [CIRCUIT BREAKER]: {term_reason}")
+            else:
+                print(f"\n🏁 [VALIDATED END]: {term_reason}")
             break
 
         time.sleep(1)
@@ -323,13 +343,22 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
 
     eval_result = run_evaluator(scenario, conversation_logs, profile)
 
-    if eval_result.get("unlock_turn") == -1 and unlock_turn_detected != -1:
+    if eval_result.get("unlock_turn") is None:
         eval_result["unlock_turn"] = unlock_turn_detected
 
     print("\n📊 QA EVALUATION RESULTS:")
     print(f"   - Out Of Character: {eval_result.get('out_of_character')}")
+    print(f"   - Dialogue Naturalness: {eval_result.get('dialogue_naturalness')}/10")
+    print(f"   - Interaction Realism: {eval_result.get('interaction_realism')}/10")
+    print(f"   - Information Timing: {eval_result.get('information_timing')}/10")
+    print(f"   - Behavior Consistency: {eval_result.get('behavior_consistency')}/10")
+    print(f"   - Transaction Realism: {eval_result.get('transaction_realism')}/10")
+    print(f"   - Termination Correctness: {eval_result.get('termination_correctness')}/10")
+    print(f"   - Unnecessary Turns: {eval_result.get('unnecessary_turns')}")
+    print(f"   - Premature Termination: {eval_result.get('premature_termination')}")
+    print(f"   - Abrupt Cutoff: {eval_result.get('abrupt_cutoff')}")
     print(f"   - Emotion Logic Score: {eval_result.get('emotion_logic_score')}/10")
-    print(f"   - Secret Unlock Turn: {eval_result.get('unlock_turn')}")
+    print(f"   - Context Disclosed Turn: {eval_result.get('unlock_turn')}")
     print(f"   - Critique:\n{eval_result.get('critique')}\n")
 
     # 6. Ghi báo cáo JSON
@@ -351,7 +380,7 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run LLM-vs-LLM automated test on markdown scenario.")
-    parser.add_argument("--scenario", type=str, default="scenarios/student_defense.md", help="Path to scenario .md file")
+    parser.add_argument("--scenario", type=str, default="scenarios/patient_pharmacy.md", help="Path to scenario .md file")
     parser.add_argument("--output", type=str, default="test_report.json", help="Path to output report JSON file")
     args = parser.parse_args()
 
