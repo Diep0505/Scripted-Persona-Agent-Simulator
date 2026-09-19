@@ -6,8 +6,9 @@ Cải tiến kiến trúc:
 2. Bộ kiểm chứng kết thúc (validate_termination):
    - Độc lập xác thực xem cuộc hội thoại đã thực sự hoàn tất chưa.
    - conversation_end_requested từ LLM chỉ là ĐỀ NGHỊ (Request), không phải lệnh cưỡng chế.
-   - Bắt buộc kiểm tra Pending Question (câu hỏi dở dang từ khách hàng), Pending Request và Required Actions.
-   - Ngăn chặn triệt để tình trạng kết thúc cụt lủn khi khách hàng vừa hỏi thêm sau thanh toán.
+   - Bắt buộc kiểm tra Pending Question (câu hỏi dở dang từ khách hàng).
+   - KHÔNG chặn kết thúc khi khách hàng đã yêu cầu ngắt (conversation_end_requested=True) chỉ vì một yêu cầu xử lý offline trong tương lai (như "có gì báo lại tôi sau nhé").
+   - Cơ chế Chống lặp hội thoại (Anti-Loop Circuit Breaker): Tự động phát hiện khi hai bên đã thống nhất bước tiếp theo và lặp lại các câu chào/hẹn báo lại để ngắt dứt khoát, không để hội thoại trôi đến max_turns.
 3. Chuyển đổi trạng thái cảm xúc theo sự kiện (Event-driven):
    - Thay đổi Satisfaction, Patience, Stress một cách có quy luật dựa trên diễn biến.
 4. Xóa bỏ luật lệ game cơ học Trust > 60 để mở bí mật; chuyển sang kiểm tra sự thật bối cảnh theo ngữ cảnh câu hỏi.
@@ -33,6 +34,29 @@ QUESTION_PATTERNS = [
 
 QUESTION_REGEX = re.compile("|".join(QUESTION_PATTERNS), re.IGNORECASE)
 
+# Các mẫu câu yêu cầu thông tin / tìm kiếm / tư vấn trực tiếp (Active Inquiry - KHÔNG PHẢI wrap-up)
+ACTIVE_INQUIRY_PATTERNS = [
+    r"\b(gửi\s+(giúp\s+)?(cho\s+)?(tôi|em|mình)?\s*(bảng\s+giá|thông\s+tin|chi\s+tiết|pháp\s+lý|thiết\s+kế|hình\s+ảnh|tài\s+liệu))\b",
+    r"\b(tôi\s+đang\s+tìm|cần\s+tìm|tìm\s+căn|tìm\s+nhà|tìm\s+thuốc)\b",
+    r"\b(bán\s+cho|lấy\s+cho|lấy\s+em|lấy\s+tôi|cắt\s+cho)\b",
+    r"\b(tư\s+vấn\s+(cho|giúp)|giới\s+thiệu\s+(cho|giúp))\b",
+    r"\b(có\s+(căn|dự\s+án|loại|thuốc|mẫu)\s+nào)\b",
+    r"\b(báo\s+giá\s+(giúp|cho)|tài\s+chính\s+tầm)\b",
+]
+
+ACTIVE_INQUIRY_REGEX = re.compile("|".join(ACTIVE_INQUIRY_PATTERNS), re.IGNORECASE)
+
+# Các mẫu câu thống nhất bước tiếp theo / chào kết thúc thực sự (Wrap-up / Next Steps Agreed / Farewell)
+WRAP_UP_PATTERNS = [
+    r"\b(chờ\s+tin|đợi\s+tin\s+từ\s+(bạn|anh|em|chị)|khi\s+nào\s+có\s+(kết\s+quả|tin|thông\s+tin)\s+thì\s+báo)\b",
+    r"\b(báo\s+lại\s+(tôi|em|mình)\s+sau|liên\s+hệ\s+lại\s+sau|có\s+gì\s+báo\s+sau)\b",
+    r"\b(chốt\s+lịch\s+sau|trao\s+đổi\s+sau|sắp\s+xếp\s+sau|hẹn\s+bữa\s+khác)\b",
+    r"\b(tạm\s+biệt|hẹn\s+gặp\s+lại|chào\s+(bạn|chị|anh)\s+nhé|em\s+chào\s+(chị|anh)\s+ạ|xin\s+phép\s+(về|dừng))\b",
+    r"\b(tôi\s+chờ\s+tin\s+nhé|tôi\s+đợi\s+nhé)\b",
+]
+
+WRAP_UP_REGEX = re.compile("|".join(WRAP_UP_PATTERNS), re.IGNORECASE)
+
 
 def has_unresolved_question(text: str) -> bool:
     """
@@ -42,6 +66,19 @@ def has_unresolved_question(text: str) -> bool:
         return False
     stripped = text.strip()
     return bool(QUESTION_REGEX.search(stripped))
+
+
+def is_wrap_up_statement(text: str) -> bool:
+    """
+    Kiểm tra xem câu thoại có phải là lời chốt bước tiếp theo / chào kết thúc không.
+    Nếu câu có chứa yêu cầu tìm kiếm, gửi thông tin, báo giá hoặc thắc mắc trực tiếp -> KHÔNG PHẢI wrap-up.
+    """
+    if not text:
+        return False
+    stripped = text.strip()
+    if ACTIVE_INQUIRY_REGEX.search(stripped):
+        return False
+    return bool(WRAP_UP_REGEX.search(stripped))
 
 
 def make_initial_state(initial_config: Optional[InitialState] = None) -> dict:
@@ -60,6 +97,7 @@ def make_initial_state(initial_config: Optional[InitialState] = None) -> dict:
         "end_validated": False,
         "termination_reason": None,
         "context_facts_disclosed": [],
+        "wrap_up_turn_count": 0,
     }
 
     if initial_config:
@@ -169,15 +207,18 @@ def validate_termination(
     - Python Engine thẩm định độc lập các điều kiện:
       1. Turn limit: Nếu turn >= max_turns -> cưỡng chế ngắt (MAX_TURNS_REACHED).
       2. Pending Question: Nếu câu thoại vừa rồi của khách hàng có câu hỏi chưa giải đáp -> TỪ CHỐI ngắt.
-      3. Pending Request: Nếu khách hàng còn yêu cầu dở dang -> TỪ CHỐI ngắt.
-      4. Required Actions: Nếu kịch bản yêu cầu hành động nghiệp vụ (VD: PAYMENT) mà chưa làm -> TỪ CHỐI ngắt.
-      5. End Request: Nếu các điều kiện trên đều thỏa mãn VÀ khách hàng đề xuất ngắt -> CHẤP THUẬN (COMPLETED).
+      3. Pending Request: Chỉ chặn ngắt nếu khách hàng yêu cầu xử lý ngay trong phiên chat (conversation_end_requested == False).
+         Nếu khách hàng đã muốn kết thúc hoặc hẹn báo lại sau offline -> KHÔNG CHẶN.
+      4. Anti-Loop Circuit Breaker: Nếu hai bên đã thống nhất bước tiếp theo và lặp lại lời hẹn/chào -> TỰ ĐỘNG KẾT THÚC.
+      5. Required Actions: Nếu kịch bản yêu cầu hành động bắt buộc (VD: PAYMENT) mà chưa làm -> TỪ CHỐI ngắt.
+      6. End Request: Nếu các điều kiện trên thỏa mãn VÀ khách hàng đề xuất ngắt -> CHẤP THUẬN (COMPLETED).
     
     Returns:
         Tuple[bool, ConversationLifecycleState, str]:
         (is_terminated, lifecycle_state, reason_description)
     """
     max_turns = completion_rules.max_turns
+    min_turns = getattr(completion_rules, "min_turns", 2)
 
     # 1. Ghi nhận các hành động nghiệp vụ vừa xuất hiện
     if detected_actions:
@@ -193,7 +234,18 @@ def validate_termination(
         state["termination_reason"] = reason
         return True, ConversationLifecycleState.MAX_TURNS_REACHED, reason
 
-    # 3. Kiểm tra Pending Question từ phía khách hàng
+    # 3. Chốt chặn số lượt tối thiểu (Min Turns Protection)
+    # Tuyệt đối không cho phép kết thúc tự nhiên ở những lượt đầu khi hai bên chưa kịp trao đổi nghiệp vụ (Turn < min_turns - 1)
+    if current_turn < min_turns - 1:
+        state["lifecycle_state"] = ConversationLifecycleState.ACTIVE.value
+        state["end_validated"] = False
+        state["conversation_end"] = False
+        state["wrap_up_turn_count"] = 0
+        reason = f"Hội thoại mới ở lượt {current_turn + 1}/{min_turns}, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
+        state["termination_reason"] = reason
+        return False, ConversationLifecycleState.ACTIVE, reason
+
+    # 4. Kiểm tra Pending Question từ phía khách hàng
     reply_text = agent_response.reply
     has_question_in_reply = has_unresolved_question(reply_text)
     is_pending_question = agent_response.pending_question or has_question_in_reply
@@ -205,16 +257,8 @@ def validate_termination(
         state["lifecycle_state"] = ConversationLifecycleState.ACTIVE.value
         state["end_validated"] = False
         state["conversation_end"] = False
+        state["wrap_up_turn_count"] = 0
         reason = "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
-        state["termination_reason"] = reason
-        return False, ConversationLifecycleState.ACTIVE, reason
-
-    # 4. Kiểm tra Pending Request từ phía khách hàng
-    if agent_response.pending_request:
-        state["lifecycle_state"] = ConversationLifecycleState.ACTIVE.value
-        state["end_validated"] = False
-        state["conversation_end"] = False
-        reason = "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
         state["termination_reason"] = reason
         return False, ConversationLifecycleState.ACTIVE, reason
 
@@ -235,16 +279,49 @@ def validate_termination(
         state["termination_reason"] = reason
         return False, ConversationLifecycleState.TRANSACTION_PENDING, reason
 
-    # 6. Kiểm tra xem Agent có đề xuất kết thúc hội thoại không
+    # 6. Kiểm tra Pending Request / Active Inquiry trực tiếp
+    # Nếu câu nói của khách chứa yêu cầu nhận thông tin (tìm nhà, gửi bảng giá/pháp lý, lấy thuốc...)
+    # hoặc có cờ pending_request (và khách chưa chủ động xin kết thúc hội thoại)
+    has_inquiry = bool(ACTIVE_INQUIRY_REGEX.search(reply_text))
+    if has_inquiry or (agent_response.pending_request and not agent_response.conversation_end_requested):
+        if not is_wrap_up_statement(reply_text):
+            state["lifecycle_state"] = ConversationLifecycleState.ACTIVE.value
+            state["end_validated"] = False
+            state["conversation_end"] = False
+            state["wrap_up_turn_count"] = 0
+            reason = "Từ chối ngắt: Khách hàng còn yêu cầu xử lý/cung cấp thông tin trực tiếp chưa được đối phương đáp ứng."
+            state["termination_reason"] = reason
+            return False, ConversationLifecycleState.ACTIVE, reason
+
+    # 7. Kiểm tra xem Agent có chủ động đề xuất kết thúc hội thoại không
     if agent_response.conversation_end_requested:
         state["lifecycle_state"] = ConversationLifecycleState.COMPLETED.value
         state["end_validated"] = True
         state["conversation_end"] = True
-        reason = "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Mục tiêu hoàn tất, không còn thắc mắc dở dang."
+        reason = "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Đã thống nhất phương án/xong việc và không còn thắc mắc dở dang."
         state["termination_reason"] = reason
         return True, ConversationLifecycleState.COMPLETED, reason
 
-    # 7. Nếu chưa ai yêu cầu kết thúc -> Tiếp tục tương tác
+    # 8. Cơ chế Chống lặp (Anti-Loop Circuit Breaker):
+    # Chỉ áp dụng khi:
+    # - Hội thoại đã qua ít nhất 2 lượt trao đổi (current_turn >= 2)
+    # - Cả 2 bên liên tục lặp lại các câu chốt hẹn bước tiếp theo / chào kết thúc (wrap_up_turn_count >= 2)
+    # - Không có câu hỏi mới hoặc yêu cầu thông tin mới
+    if current_turn >= 2:
+        is_wrap_up = is_wrap_up_statement(reply_text)
+        if is_wrap_up:
+            state["wrap_up_turn_count"] = state.get("wrap_up_turn_count", 0) + 1
+            if state["wrap_up_turn_count"] >= 2:
+                state["lifecycle_state"] = ConversationLifecycleState.COMPLETED.value
+                state["end_validated"] = True
+                state["conversation_end"] = True
+                reason = "Hai bên đã thống nhất xong bước xử lý tiếp theo và liên tục xác nhận. Tự động hoàn tất hội thoại tránh lặp lại."
+                state["termination_reason"] = reason
+                return True, ConversationLifecycleState.COMPLETED, reason
+        else:
+            state["wrap_up_turn_count"] = 0
+
+    # 9. Nếu chưa ai yêu cầu kết thúc và chưa có tín hiệu chốt bước tiếp theo -> Tiếp tục
     state["lifecycle_state"] = ConversationLifecycleState.ACTIVE.value
     state["end_validated"] = False
     state["conversation_end"] = False

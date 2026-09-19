@@ -175,6 +175,7 @@ class InitialState(BaseModel):
 class CompletionRules(BaseModel):
     """Quy tắc ngắt cuộc hội thoại và kiểm chứng tính hoàn tất."""
     max_turns: int = Field(default=10, description="Số turn tối đa trước khi cưỡng chế ngắt khẩn cấp")
+    min_turns: int = Field(default=2, description="Số lượt thoại tối thiểu trước khi được phép kết thúc tự nhiên (tránh ngắt sớm ở lượt đầu)")
     completion_keywords: List[str] = Field(
         default_factory=lambda: ["[DONE]", "[PASSED]", "[FAILED]", "[PAYMENT]", "[DONE_DEFENSE]", "[AGREED_VIEWING]", "[DEAL_CANCELLED]", "[ISSUE_RESOLVED]"],
         description="Từ khóa/tag hành động từ phía User hoặc Tester"

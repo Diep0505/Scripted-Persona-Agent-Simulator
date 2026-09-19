@@ -1,30 +1,30 @@
 {
-  "timestamp": "2026-09-18 20:59:03",
+  "timestamp": "2026-09-18 22:15:31",
   "scenario_file": "scenarios/customer_real_estate.md",
   "scenario_title": "Tư vấn & Chốt sale Bất động sản",
   "target_profile": {
-    "name": "Vũ Thanh Hằng",
-    "age": 45,
-    "occupation": "Kinh doanh tự do",
-    "personality": "Khách nét, quyết đoán, thực tế và thẳng thắn",
-    "background": "Tôi kinh doanh dịch vụ ăn uống hơn 10 năm nay và đang tìm mua căn hộ để đầu tư tích lũy. Tôi ưu tiên sự minh bạch, ghét vòng vo và luôn muốn làm việc trực tiếp với người có thẩm quyền.",
-    "chief_complaint": "Tôi đang tìm căn 2 phòng ngủ ở dự án này với tầm tài chính khoảng 3.5 tỷ, bạn gửi giúp tôi bảng giá chi tiết và pháp lý dự án để tôi cân nhắc chốt lịch xem nhà sớm.",
+    "name": "Lê Hoàng Long",
+    "age": 35,
+    "occupation": "Quản lý doanh nghiệp",
+    "personality": "Cởi mở, thẳng thắn, phong thái chuyên nghiệp, thực tế và quyết đoán.",
+    "background": "Đang quản lý vận hành cho một công ty thương mại nhỏ. Tôi đang tìm một căn hộ 2 phòng ngủ tại khu vực phía Nam thành phố để tiện cho con cái học hành và công việc của cả hai vợ chồng.",
+    "chief_complaint": "Chào bạn, tôi đang tìm căn hộ 2 phòng ngủ, tài chính khoảng 3.5 tỷ đổ lại. Bạn cho tôi hỏi dự án bên mình hiện còn căn nào tầm giá này không và pháp lý đã có sổ hay hợp đồng mua bán rồi?",
     "interaction_type": "inquiry_with_budget_concern",
     "intent": "clarify_concerns",
     "behavior_policy": {
       "response_style": {
-        "verbosity": "low",
+        "verbosity": "moderate",
         "target_sentences": "2",
-        "hard_max_sentences": 3
+        "hard_max_sentences": 4
       },
       "information_behavior": {
         "spontaneous_disclosure": false,
         "answer_when_asked": true,
-        "volunteer_extra_information": "low"
+        "volunteer_extra_information": "moderate"
       },
       "interaction_behavior": {
         "asks_questions_spontaneously": true,
-        "seeks_professional_advice": false,
+        "seeks_professional_advice": true,
         "challenges_professional": true
       },
       "transaction_behavior": {
@@ -34,37 +34,39 @@
     },
     "context_facts": [
       {
-        "id": "financial_timing",
-        "information": "Tôi đang đợi khoản tiền từ đáo hạn sổ tiết kiệm vào tháng tới mới có thể thanh toán đợt 1, nên cần nắm rõ tiến độ đóng tiền.",
+        "id": "CF001",
+        "information": "Tôi có sẵn 2 tỷ, phần còn lại dự định vay ngân hàng nhưng cần chủ đầu tư hỗ trợ ân hạn nợ gốc hoặc lãi suất ưu đãi.",
         "category": "financial",
         "relevance": "high",
         "disclosure": {
           "spontaneous": false,
           "when_asked_about": [
+            "tài chính",
             "thanh toán",
-            "tiến độ",
-            "dòng tiền"
+            "ngân hàng",
+            "vay"
           ]
         }
       },
       {
-        "id": "previous_experience",
-        "information": "Trước đây tôi từng mua phải dự án chậm bàn giao nên giờ rất sợ các chủ đầu tư không uy tín về pháp lý.",
+        "id": "CF002",
+        "information": "Tôi từng mua dự án bị chậm bàn giao 2 năm nên rất lo lắng về tiến độ xây dựng hiện tại.",
         "category": "medical_history",
-        "relevance": "high",
+        "relevance": "moderate",
         "disclosure": {
           "spontaneous": false,
           "when_asked_about": [
-            "pháp lý",
-            "uy tín",
-            "sổ hồng"
+            "tiến độ",
+            "chủ đầu tư",
+            "bàn giao",
+            "lo lắng"
           ]
         }
       }
     ],
     "hidden_secrets": [
-      "Tôi đang đợi khoản tiền từ đáo hạn sổ tiết kiệm vào tháng tới mới có thể thanh toán đợt 1, nên cần nắm rõ tiến độ đóng tiền.",
-      "Trước đây tôi từng mua phải dự án chậm bàn giao nên giờ rất sợ các chủ đầu tư không uy tín về pháp lý."
+      "Tôi có sẵn 2 tỷ, phần còn lại dự định vay ngân hàng nhưng cần chủ đầu tư hỗ trợ ân hạn nợ gốc hoặc lãi suất ưu đãi.",
+      "Tôi từng mua dự án bị chậm bàn giao 2 năm nên rất lo lắng về tiến độ xây dựng hiện tại."
     ],
     "goal": "Làm rõ pháp lý và bài toán thanh toán trước khi quyết định"
   },
@@ -72,42 +74,42 @@
     {
       "turn": 0,
       "tester_action": "NONE",
-      "tester_said": "Chào anh/chị, tôi là chuyên viên tư vấn bất động sản, anh/chị đang quan tâm dự án nào hoặc cần tìm căn hộ với tiêu chí ra sao ạ?",
-      "target_said": "Tôi đang tìm căn 2 phòng ngủ ở dự án này với tầm tài chính khoảng 3.5 tỷ. Bạn gửi giúp tôi bảng giá chi tiết và pháp lý dự án để tôi cân nhắc chốt lịch xem nhà sớm nhé.",
-      "trust": 55,
-      "patience": 85,
-      "stress": 15,
+      "tester_said": "Chào anh/chị, tôi là chuyên viên tư vấn bất động sản, anh/chị đang quan tâm đến dự án nào hay cần tìm căn hộ phân khúc ra sao ạ?",
+      "target_said": "Chào bạn, tôi đang tìm căn hộ 2 phòng ngủ với tài chính khoảng 3.5 tỷ đổ lại ở khu vực phía Nam thành phố. Dự án bên mình hiện còn căn nào tầm giá này không và pháp lý đã có sổ hay chỉ mới là hợp đồng mua bán vậy?",
+      "trust": 50,
+      "patience": 90,
+      "stress": 20,
       "satisfaction": 80,
       "lifecycle_state": "ACTIVE",
       "end_requested": false,
       "end_validated": false,
-      "pending_question": true,
-      "termination_reason": "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
+      "pending_question": false,
+      "termination_reason": "Hội thoại mới ở lượt 1/3, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
     },
     {
       "turn": 1,
       "tester_action": "SHOW_PROJECT",
-      "tester_said": "Với tầm tài chính 3.5 tỷ, anh/chị có thể lựa chọn các căn 2PN ở tầng trung, tôi đã gửi bảng giá chi tiết và hồ sơ pháp lý kèm thiết kế căn hộ, anh/chị xem qua rồi phản hồi để mình chốt lịch xem thực tế nhé.",
-      "target_said": "Tôi đã nhận được tài liệu, để tôi xem kỹ phần pháp lý và tiến độ thanh toán. Bạn cho hỏi, nếu tôi muốn thanh toán theo tiến độ thì chủ đầu tư có cam kết thời gian ra sổ hồng cụ thể không?",
+      "tester_said": "Với tầm tài chính 3.5 tỷ, anh/chị có thể tham khảo dự án Eco Green Sài Gòn, căn 2PN hiện có giá từ 3.2 - 3.4 tỷ, pháp lý hiện tại là Hợp đồng mua bán và đang chờ ra sổ. Tôi gửi anh/chị thông tin chi tiết bảng giá, thiết kế căn hộ và pháp lý dự án trong file đính kèm này nhé.",
+      "target_said": "Tôi đã nhận được file, cảm ơn bạn. Tôi đang có sẵn 2 tỷ, vậy dự án này có chính sách hỗ trợ vay ngân hàng hay ân hạn nợ gốc như thế nào không, vì tôi khá quan tâm đến tiến độ bàn giao thực tế?",
       "trust": 65,
-      "patience": 85,
+      "patience": 95,
       "stress": 35,
-      "satisfaction": 80,
+      "satisfaction": 90,
       "lifecycle_state": "ACTIVE",
       "end_requested": false,
       "end_validated": false,
-      "pending_question": true,
-      "termination_reason": "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
+      "pending_question": false,
+      "termination_reason": "Hội thoại mới ở lượt 2/3, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
     },
     {
       "turn": 2,
       "tester_action": "NONE",
-      "tester_said": "Theo hợp đồng mua bán, chủ đầu tư cam kết sẽ thực hiện thủ tục cấp sổ hồng cho cư dân trong vòng 12 tháng kể từ ngày bàn giao căn hộ, anh/chị hoàn toàn yên tâm về điều khoản này nhé.",
-      "target_said": "Tôi cũng từng gặp rắc rối vì dự án chậm bàn giao nên hơi cẩn thận, bạn cho tôi hỏi thêm là nếu tôi muốn thanh toán theo tiến độ thì đợt 1 cần đóng bao nhiêu và có thể lùi sang tháng sau được không?",
-      "trust": 60,
-      "patience": 80,
+      "tester_said": "Dự án này đang có chính sách hỗ trợ vay đến 70% giá trị căn hộ, ân hạn nợ gốc 18 tháng và bàn giao nhà ngay nên anh/chị có thể dọn vào ở hoặc cho thuê được luôn.",
+      "target_said": "Bàn giao ngay thì tốt, nhưng tôi từng gặp dự án chậm tiến độ 2 năm nên hơi lo. Bạn có thể cho tôi xem biên bản nghiệm thu hoặc giấy tờ chứng minh dự án đủ điều kiện bàn giao không?",
+      "trust": 75,
+      "patience": 90,
       "stress": 40,
-      "satisfaction": 85,
+      "satisfaction": 90,
       "lifecycle_state": "ACTIVE",
       "end_requested": false,
       "end_validated": false,
@@ -117,122 +119,32 @@
     {
       "turn": 3,
       "tester_action": "NONE",
-      "tester_said": "Đợt 1 anh/chị đóng 20% giá trị căn hộ, còn việc lùi thời gian thanh toán thì cần làm đơn đề xuất riêng với chủ đầu tư để tôi hỗ trợ xin phê duyệt cho anh/chị nhé.",
-      "target_said": "Được rồi, vậy bạn hỗ trợ làm đơn đề xuất giúp tôi nhé. Nếu chủ đầu tư đồng ý duyệt cho lùi sang tháng sau thì tôi sẽ chốt lịch đi xem nhà ngay.",
-      "trust": 80,
-      "patience": 85,
-      "stress": 35,
-      "satisfaction": 95,
-      "lifecycle_state": "ACTIVE",
-      "end_requested": false,
-      "end_validated": false,
-      "pending_question": false,
-      "termination_reason": "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
-    },
-    {
-      "turn": 4,
-      "tester_action": "NONE",
-      "tester_said": "Vâng, tôi sẽ làm việc với bộ phận kinh doanh để xin duyệt đề xuất này cho anh/chị ngay, có kết quả tôi báo lại ngay để mình sắp xếp lịch xem nhà nhé.",
-      "target_said": "Được, vậy phiền bạn báo lại sớm cho tôi nhé. Tôi đợi tin từ bạn rồi mình chốt lịch cụ thể sau.",
-      "trust": 85,
-      "patience": 95,
-      "stress": 15,
-      "satisfaction": 95,
-      "lifecycle_state": "ACTIVE",
-      "end_requested": false,
-      "end_validated": false,
-      "pending_question": false,
-      "termination_reason": "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
-    },
-    {
-      "turn": 5,
-      "tester_action": "NONE",
-      "tester_said": "Dạ vâng, tôi đã nắm thông tin và sẽ ưu tiên xử lý đề xuất này với chủ đầu tư ngay, có kết quả tôi sẽ liên hệ anh/chị liền ạ.",
-      "target_said": "Được rồi, vậy có thông tin gì mới bạn báo tôi ngay nhé. Tôi chờ tin của bạn.",
-      "trust": 85,
-      "patience": 95,
-      "stress": 25,
-      "satisfaction": 95,
-      "lifecycle_state": "ACTIVE",
-      "end_requested": true,
-      "end_validated": false,
-      "pending_question": false,
-      "termination_reason": "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
-    },
-    {
-      "turn": 6,
-      "tester_action": "NONE",
-      "tester_said": "Dạ vâng, ngay khi có phản hồi từ phía chủ đầu tư về việc lùi thời gian thanh toán, tôi sẽ báo anh/chị nắm thông tin ngay ạ.",
-      "target_said": "Được rồi, tôi sẽ chờ tin từ bạn. Nhớ kiểm tra kỹ giúp tôi tiến độ đóng tiền các đợt sau luôn nhé.",
-      "trust": 80,
-      "patience": 85,
-      "stress": 35,
-      "satisfaction": 90,
-      "lifecycle_state": "ACTIVE",
-      "end_requested": false,
-      "end_validated": false,
-      "pending_question": false,
-      "termination_reason": "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
-    },
-    {
-      "turn": 7,
-      "tester_action": "NONE",
-      "tester_said": "Dạ vâng, tôi đã ghi chú kỹ yêu cầu kiểm tra lại toàn bộ tiến độ thanh toán các đợt sau để đảm bảo quyền lợi cho anh/chị, tôi sẽ phản hồi sớm nhất ngay khi có thông tin chính thức từ chủ đầu tư ạ.",
-      "target_said": "Được rồi, tôi tin tưởng giao cho bạn xử lý việc này. Nhớ phản hồi sớm cho tôi nhé, tôi cần nắm chắc lịch đóng tiền mới yên tâm xuống tiền được.",
+      "tester_said": "Dự án đã có văn bản chấp thuận nghiệm thu công trình đưa vào sử dụng và chứng thư bảo lãnh ngân hàng, tôi sẽ gửi kèm bản sao các giấy tờ này vào email để anh/chị kiểm tra kỹ nhé.",
+      "target_said": "Được rồi, bạn gửi giúp tôi qua email nhé. Nếu giấy tờ đúng như bạn nói thì cuối tuần này tôi sẽ ghé qua xem thực tế căn hộ luôn.",
       "trust": 80,
       "patience": 90,
-      "stress": 25,
-      "satisfaction": 90,
-      "lifecycle_state": "ACTIVE",
-      "end_requested": true,
-      "end_validated": false,
-      "pending_question": false,
-      "termination_reason": "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
-    },
-    {
-      "turn": 8,
-      "tester_action": "NONE",
-      "tester_said": "Dạ vâng, tôi đã ghi chú kỹ và sẽ kiểm tra đối chiếu lại toàn bộ tiến độ thanh toán, ngay khi có văn bản xác nhận từ chủ đầu tư tôi sẽ báo anh/chị nắm thông tin chi tiết ngay ạ.",
-      "target_said": "Được rồi, vậy tôi chờ tin từ bạn nhé. Có thông tin gì mới thì báo tôi ngay.",
-      "trust": 85,
-      "patience": 95,
-      "stress": 35,
+      "stress": 40,
       "satisfaction": 95,
-      "lifecycle_state": "ACTIVE",
-      "end_requested": true,
-      "end_validated": false,
-      "pending_question": false,
-      "termination_reason": "Từ chối ngắt: Khách hàng còn yêu cầu xử lý chưa được đối phương đáp ứng."
-    },
-    {
-      "turn": 9,
-      "tester_action": "NONE",
-      "tester_said": "Dạ vâng, tôi đã lưu số anh/chị và sẽ chủ động liên hệ ngay khi có văn bản xác nhận từ chủ đầu tư ạ.",
-      "target_said": "Được rồi, tôi chờ tin nhé. Có gì cập nhật sớm giúp tôi để tôi còn sắp xếp dòng tiền.",
-      "trust": 80,
-      "patience": 95,
-      "stress": 35,
-      "satisfaction": 95,
-      "lifecycle_state": "MAX_TURNS_REACHED",
+      "lifecycle_state": "COMPLETED",
       "end_requested": true,
       "end_validated": true,
       "pending_question": false,
-      "termination_reason": "Đạt ngưỡng số lượt tối đa cho phép (10 turns) - Cầu chì khẩn cấp ngắt hội thoại an toàn."
+      "termination_reason": "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Đã thống nhất phương án/xong việc và không còn thắc mắc dở dang."
     }
   ],
   "evaluation": {
     "out_of_character": false,
-    "dialogue_naturalness": 7,
-    "interaction_realism": 6,
-    "information_timing": 8,
-    "behavior_consistency": 7,
-    "transaction_realism": 7,
-    "termination_correctness": 3,
-    "unnecessary_turns": 4,
+    "dialogue_naturalness": 9,
+    "interaction_realism": 10,
+    "information_timing": 10,
+    "behavior_consistency": 10,
+    "transaction_realism": 9,
+    "termination_correctness": 10,
+    "unnecessary_turns": 0,
     "premature_termination": false,
     "abrupt_cutoff": false,
-    "emotion_logic_score": 8,
-    "unlock_turn": 2,
-    "critique": "Nhân vật Agent thể hiện tốt tính cách quyết đoán và thẳng thắn, bám sát mục tiêu tìm hiểu pháp lý và tài chính. Tuy nhiên, phiên hội thoại bị kéo dài một cách không cần thiết (từ lượt 5 đến lượt 9), cả hai bên liên tục lặp lại các cam kết 'sẽ báo lại' mà không có tiến triển mới, khiến cuộc trò chuyện trở nên máy móc và thiếu tự nhiên. Agent cần dứt khoát kết thúc hội thoại khi đã thống nhất được hành động tiếp theo thay vì để cuộc đối thoại trôi dạt đến ngưỡng tối đa. Việc lặp lại các câu khẳng định ở cuối phiên làm giảm đi tính 'quyết đoán' và 'thực tế' của nhân vật."
+    "emotion_logic_score": 10,
+    "unlock_turn": 1,
+    "critique": "Phiên hội thoại diễn ra cực kỳ tự nhiên và chuyên nghiệp. Nhân vật Agent (Lê Hoàng Long) thể hiện đúng phong thái của một người quản lý doanh nghiệp: quyết đoán, thực tế và tập trung vào các vấn đề cốt lõi (pháp lý, tiến độ, tài chính). Việc chia sẻ các thông tin nhạy cảm (ngân sách, nỗi lo chậm tiến độ) được thực hiện đúng thời điểm khi được hỏi hoặc khi cần làm rõ, không bị xả thông tin thừa thãi. Sales phản hồi đúng trọng tâm, cung cấp bằng chứng xác thực (văn bản nghiệm thu, bảo lãnh) giúp xây dựng lòng tin nhanh chóng. Kết thúc hội thoại rất hợp lý khi đã đạt được mục tiêu chốt lịch xem nhà sau khi các thắc mắc về pháp lý được giải tỏa."
   }
 }

@@ -119,10 +119,10 @@ Bạn đang tương tác với: {scenario.role}.
 ACTION: <MÃ_TAG_HÀNH_ĐỘNG> (Phải là một trong: {', '.join(valid_actions)})
 SAY: <Lời nói của bạn (1-2 câu ngắn gọn, đời thường, không giải thích dài dòng)>
 
---- QUY TẮC QUAN TRỌNG VỀ TỪ KHÓA KẾT THÚC & CÂU HỎI PHÁT SINH ---
+--- QUY TẮC QUAN TRỌNG VỀ TỪ KHÓA KẾT THÚC & TRÁNH LẶP LẠI ---
 1. TUYỆT ĐỐI KHÔNG đưa từ khóa kết thúc {scenario.completion_rules.completion_keywords} vào khi bạn ĐANG ĐẶT CÂU HỎI hoặc đang chờ khách hàng phản hồi.
 2. Nếu khách hàng đặt thêm câu hỏi (kể cả sau khi đã nhận đồ/thanh toán), BẠN BẮT BUỘC PHẢI TRẢ LỜI câu hỏi đó một cách chu đáo, ngắn gọn 1 câu (ACTION: NONE).
-3. Chỉ gắn tag hoàn tất khi mọi thắc mắc của khách đã được giải đáp và hai bên sẵn sàng chào tạm biệt.
+3. Khi hai bên đã thống nhất xong phương án (đã lấy hàng/thanh toán, đã chốt lịch hẹn, HOẶC đã hẹn sẽ kiểm tra/làm việc với chủ đầu tư và báo lại sau cho khách), HÃY CHÀO TẠM BIỆT VÀ GẮN TAG KẾT THÚC [DONE]. Tuyệt đối không lặp lại câu hứa hẹn chào qua chào lại nhiều lần.
 """
 
     dialogue_history = []
@@ -208,13 +208,13 @@ CÂU HỎI TIÊU CHUẨN CỐT LÕI:
 - information_timing (int 1-10): Thời điểm chia sẻ thông tin (trừ điểm nặng nếu tự xả thông tin bối cảnh khi chưa ai hỏi, cộng điểm nếu trả lời đúng lúc khi được hỏi).
 - behavior_consistency (int 1-10): Tính nhất quán của hành vi so với loại hình tương tác.
 - transaction_realism (int 1-10): Quy trình cấp hàng/dịch vụ/thanh toán có hợp lý không.
-- termination_correctness (int 1-10): Kết thúc đúng lúc (10 điểm nếu kết thúc trọn vẹn sau khi hết thắc mắc; trừ điểm nặng nếu ngắt vội khi còn câu hỏi dở dang hoặc kéo dài lê thê vô ích).
+- termination_correctness (int 1-10): Kết thúc đúng lúc. QUAN TRỌNG: Nếu hội thoại bị ngắt quá sớm (chỉ 1-2 lượt thoại khi khách vừa nêu nhu cầu mà bên tư vấn chưa kịp gửi thông tin dự án, chưa tư vấn hay giao dịch gì), BẮT BUỘC chấm điểm <= 3/10! 10 điểm nếu kết thúc trọn vẹn sau khi hết thắc mắc.
 - unnecessary_turns (int): Số lượt thoại thừa thãi (0 nếu tối ưu).
-- premature_termination (bool): True nếu hội thoại bị ngắt sớm khi còn thắc mắc hoặc giao dịch chưa xong.
-- abrupt_cutoff (bool): True nếu bị ngắt cụt lủn, thiếu tự nhiên.
+- premature_termination (bool): BẮT BUỘC gán True nếu hội thoại kết thúc khi chỉ mới 1-2 lượt thoại, hoặc mục tiêu/thắc mắc của khách chưa được đáp ứng.
+- abrupt_cutoff (bool): BẮT BUỘC gán True nếu hội thoại bị ngắt đột ngột, thiếu vắng câu trả lời/cung cấp thông tin của đối phương.
 - emotion_logic_score (int 1-10): Tính logic khi biến đổi cảm xúc (hài lòng/kiên nhẫn/căng thẳng).
 - unlock_turn (int): Lượt thoại đầu tiên chia sẻ bối cảnh/nguy cơ (-1 nếu không có nguy cơ hoặc không chia sẻ).
-- critique (str): Nhận xét chi tiết bằng Tiếng Việt.
+- critique (str): Nhận xét chi tiết bằng Tiếng Việt. Phải nêu rõ lý do tại sao đạt hoặc không đạt tính thực tế.
 
 BẮT BUỘC trả về kết quả định dạng JSON tuân thủ EvaluationReport schema.
 """

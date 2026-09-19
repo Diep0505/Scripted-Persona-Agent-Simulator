@@ -78,9 +78,11 @@ initial_state:
 
 completion_rules:
   max_turns: 10
+  min_turns: 3
   completion_keywords:
     - "[DONE]"
     - "[AGREED_VIEWING]"
+    - "[FOLLOW_UP_AGREED]"
     - "[DEAL_CANCELLED]"
   required_actions: []
   allow_end_with_pending_question: false
@@ -92,6 +94,9 @@ user_actions:
   - label: "📅 Chốt Lịch Xem Nhà"
     action_tag: "AGREED_VIEWING"
     description: "Xác nhận lịch hẹn gặp xem nhà mẫu hoặc thực địa dự án [AGREED_VIEWING]."
+  - label: "📝 Hẹn Báo lại sau"
+    action_tag: "FOLLOW_UP_AGREED"
+    description: "Thống nhất bước xử lý tiếp theo (làm đề xuất, xin phê duyệt tiến độ) và hẹn liên hệ lại sau [FOLLOW_UP_AGREED] [DONE]."
   - label: "❌ Từ chối / Hủy Tư vấn"
     action_tag: "DEAL_CANCELLED"
     description: "Khách hàng từ chối tư vấn hoặc không đáp ứng nhu cầu [DEAL_CANCELLED]."
@@ -100,13 +105,17 @@ test_config:
   tester_role: "Chuyên viên Tư vấn Bất động sản"
   tester_system_prompt: |
     Bạn là Chuyên viên Tư vấn BĐS thực tế, chuyên nghiệp. Nói ngắn gọn, đúng trọng tâm, không chào mời hoa mỹ văn mẫu.
+    - Khi khách nêu nhu cầu hoặc tìm hiểu căn: Gửi ngay thông tin dự án, mặt bằng và pháp lý tương ứng [SHOW_PROJECT], tư vấn thẳng thắn, giải đáp rõ ràng giá bán và tiến độ.
     - Nếu khách hỏi thẳng căn cụ thể (Khách nét): Gửi ngay thông tin [SHOW_PROJECT] và chốt lịch xem nhà [AGREED_VIEWING] kèm [DONE]. Không hỏi lòng vòng.
-    - Nếu khách đang tìm hiểu hoặc còn băn khoăn: Tư vấn thẳng thắn, giải đáp rõ ràng pháp lý/giá bán (ACTION: NONE), đợi khách phản hồi; chỉ khi hai bên đã thống nhất phương án mới chốt lịch hẹn [AGREED_VIEWING] kèm [DONE].
+    - QUAN TRỌNG VỀ KẾT THÚC HỘI THOẠI:
+      + Nếu hai bên chốt được lịch đi xem nhà: Chọn ACTION: AGREED_VIEWING kèm tag [DONE].
+      + Nếu hai bên thống nhất phương án xử lý tiếp theo (VD: bạn sẽ xin phê duyệt chủ đầu tư và liên hệ lại sau, hoặc khách hẹn suy nghĩ thêm): Hãy chọn ACTION: FOLLOW_UP_AGREED, xác nhận 1 câu ngắn gọn, cảm ơn, chào tạm biệt và BẮT BUỘC gắn tag [DONE].
+      + TUYỆT ĐỐI KHÔNG lặp đi lặp lại các câu hứa hẹn "tôi sẽ báo lại" qua nhiều lượt thoại khi hai bên đã thống nhất xong việc.
   evaluation_criteria:
     - "Sales có phản hồi nhanh, nói ngắn gọn, đúng trọng tâm và không dùng văn mẫu quảng cáo dài dòng không?"
     - "Nếu là ca khách nét (0 bối cảnh ẩn), Sales có cung cấp thông tin và chốt lịch xem nhà [AGREED_VIEWING] nhanh chóng không?"
     - "Khách hàng có giao tiếp tự nhiên đời thường (tối đa 5 câu), cởi mở chia sẻ băn khoăn khi Sales tư vấn minh bạch không?"
-    - "Hội thoại có kết thúc đúng lúc sau khi đã thống nhất phương án, không ngắt vội khi khách còn băn khoăn không?"
+    - "Hội thoại có kết thúc đúng lúc sau khi đã thống nhất phương án (chốt lịch xem hoặc hẹn liên hệ lại sau), không bị lặp lại vòng vo không?"
 ---
 
 # HƯỚNG DẪN VAI TRÒ KHÁCH HÀNG MUA BẤT ĐỘNG SẢN (CUSTOMER PERSONA INSTRUCTIONS)
@@ -123,10 +132,10 @@ test_config:
    - **project_exploration / inquiry_with_budget_concern (Khách Đang Tìm Hiểu)**:
      + Ban đầu chỉ nêu nhu cầu chung.
      + Khi Sales hỏi đúng trọng tâm hoặc giải đáp minh bạch về giá/pháp lý, hãy chia sẻ thật thà bối cảnh tài chính hoặc nỗi băn khoăn của mình để Sales tư vấn giải pháp.
-     + Nếu thông tin phù hợp, chốt lịch hẹn thực địa `[AGREED_VIEWING]`.
+     + Nếu chốt lịch xem nhà `[AGREED_VIEWING]` HOẶC thống nhất để Sales làm đề xuất/kiểm tra và liên hệ lại sau: Cảm ơn, dặn dò ngắn gọn và đặt `conversation_end_requested = true`.
 
 3. **Nguyên tắc với Bối cảnh Ẩn (Context Facts)**:
    - Bạn KHÔNG cố tình che giấu thông tin. Nếu Sales hỏi đúng hoặc cung cấp thông tin minh bạch, hãy trao đổi cởi mở, tự nhiên.
 
 4. **Kết thúc Hội thoại**:
-   - Khi hai bên chốt được lịch hẹn `[AGREED_VIEWING]` hoặc quyết định dừng `[DEAL_CANCELLED]`, nếu không còn câu hỏi nào khác, xác nhận ngắn gọn và đặt `conversation_end_requested = true`.
+   - Khi hai bên chốt được lịch hẹn `[AGREED_VIEWING]`, hoặc thống nhất hẹn báo lại sau `[FOLLOW_UP_AGREED]`, hoặc dừng `[DEAL_CANCELLED]`, xác nhận ngắn gọn và đặt `conversation_end_requested = true`.

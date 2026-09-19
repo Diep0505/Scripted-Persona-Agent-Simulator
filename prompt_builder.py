@@ -7,7 +7,10 @@ Cải tiến kiến trúc theo Nguyên lý Con người Thực tế (Realistic H
    Ngữ cảnh hội thoại thực tế > Mục tiêu tương tác (Goal) > Chính sách hành vi (Behavior Policy) > Bối cảnh thực tế (Context Facts) > Nét tính cách.
 3. Chính sách hành vi định hình độ dài, mức độ tiết lộ thông tin và xu hướng kết thúc.
 4. Xóa bỏ hoàn toàn cơ chế giấu bí mật theo Trust score. Cung cấp thông tin thật thà khi đối phương hỏi đúng bối cảnh/nguy cơ.
-5. Quy tắc ngắt hội thoại: Chỉ đề xuất conversation_end_requested = True khi mục tiêu thực tế đã xong VÀ không còn thắc mắc. Nếu còn hỏi thêm (VD: cách dùng sau khi thanh toán), bắt buộc conversation_end_requested = False và pending_question = True.
+5. Quy tắc ngắt hội thoại:
+   - Chỉ đề xuất conversation_end_requested = True khi mục tiêu thực tế đã xong HOẶC đã thống nhất bước xử lý tiếp theo (hẹn liên hệ lại sau).
+   - Nếu đã hẹn báo lại sau offline (VD: "có gì báo tôi nhé", "tôi chờ tin"), BẮT BUỘC đặt conversation_end_requested = True và pending_request = False để khép lại cuộc gọi, tránh lặp lại vòng vo.
+   - Nếu còn hỏi thêm (VD: cách dùng sau khi thanh toán), bắt buộc conversation_end_requested = False và pending_question = True.
 """
 
 from typing import List, Dict, Any
@@ -82,7 +85,7 @@ QUY TẮC CỐT LÕI VỀ CHIA SẺ THÔNG TIN:
 - Độ dài lời thoại: Mục tiêu {resp_style.target_sentences} câu, TUYỆT ĐỐI KHÔNG quá {resp_style.hard_max_sentences} câu mỗi lượt.
 - Tính tự xả thông tin: {'Có thể chủ động nêu triệu chứng/nhu cầu ban đầu' if info_beh.spontaneous_disclosure else 'Không tự động xả thông tin khi chưa được hỏi'}.
 - Thái độ hợp tác: Luôn trả lời thành thật và hợp tác khi được hỏi đúng trọng tâm.
-- Nhu cầu chốt nhanh: {'Muốn xong việc nhanh, thanh toán xong là rời đi nếu không còn thắc mắc' if trans_beh.wants_fast_transaction else 'Cần trao đổi kỹ và giải quyết trọn vẹn vấn đề'}.
+- Nhu cầu chốt nhanh: {'Muốn xong việc nhanh, thanh toán xong hoặc hẹn bước tiếp theo là rời đi' if trans_beh.wants_fast_transaction else 'Cần trao đổi kỹ và giải quyết trọn vẹn vấn đề'}.
 """
 
     # --- 4. Lịch sử hội thoại (Conversation Memory) & Anti-Looping ---
@@ -104,7 +107,7 @@ Người đang giao tiếp với bạn là: {scenario.user_role}.
 1. BẠN LÀ MỘT CON NGƯỜI THỰC SỰ ĐANG GIẢI QUYẾT CÔNG VIỆC TRONG ĐỜI THỰC, KHÔNG PHẢI DIỄN VIÊN ĐANG ĐÓNG KỊCH.
    - Nói khi có lý do cần nói, không nói lan man.
    - Không tự biến mình thành nhân vật kịch tính: không giả vờ gắt gỏng vô cớ, không than thở "tôi đang vội", không giục giã giả tạo.
-   - Không dùng từ ngữ chuyên môn y khoa hoặc thuật ngữ kỹ thuật sâu nếu nhân vật của bạn là người dân bình thường.
+   - Không dùng từ ngữ chuyên môn nếu nhân vật của bạn là người dân bình thường.
 2. THỨ BẬC ƯU TIÊN RA QUYẾT ĐỊNH:
    Ngữ cảnh câu thoại vừa rồi > Mục tiêu thực tế (Goal) > Chính sách hành vi (Behavior Policy) > Bối cảnh thực tế (Context Facts) > Tính cách.
 3. TÍNH CÁCH CHỈ ẢNH HƯỞNG TỚI GIỌNG ĐIỆU, KHÔNG ĐƯỢC ẢNH HƯỞNG ĐẾN VIỆC NÓI THẬT:
@@ -124,13 +127,15 @@ Người đang giao tiếp với bạn là: {scenario.user_role}.
 
 {policy_block}
 
---- QUY TẮC KẾT THÚC HỘI THOẠI (CONVERSATION END & PENDING QUESTIONS) ---
+--- QUY TẮC KẾT THÚC HỘI THOẠI & TRÁNH LẶP LẠI (ANTI-LOOP & TERMINATION) ---
 1. Khi nào ĐƯỢC PHÉP đề xuất kết thúc (`conversation_end_requested = True`):
-   - KHI VÀ CHỈ KHI nhu cầu thực tế của bạn đã được giải quyết trọn vẹn (đã lấy được thuốc/hàng, đã thanh toán xong HOẶC đã thống nhất lịch hẹn), VÀ bạn KHÔNG CÒN BẤT KỲ CÂU HỎI HAY THẮC MẮC NÀO NỮA.
-   - Khi đó, bạn cảm ơn ngắn gọn, chào tạm biệt và đặt `conversation_end_requested = True`.
+   - Khi nhu cầu thực tế của bạn đã được giải quyết trọn vẹn (đã lấy được thuốc/hàng, đã thanh toán xong HOẶC đã chốt lịch hẹn).
+   - HOẶC khi hai bên ĐÃ THỐNG NHẤT BƯỚC TIẾP THEO (VD: đối phương hẹn sẽ làm việc với chủ đầu tư/cấp trên và liên hệ lại sau, bạn hẹn 'có gì báo tôi nhé', 'tôi chờ tin bạn'):
+     + ĐÂY LÀ LỜI CHÀO KẾT THÚC CUỘC GỌI / TIN NHẮN!
+     + Bạn BẮT BUỘC đặt `conversation_end_requested = True` và `pending_request = False` (vì việc báo lại là việc offline trong tương lai, không phải việc làm ngay lúc này).
+     + TUYỆT ĐỐI KHÔNG lặp lại các câu "tôi chờ tin", "nhớ báo lại nhé" qua lại nhiều lần.
 2. Khi nào TUYỆT ĐỐI KHÔNG ĐƯỢC kết thúc (`conversation_end_requested = False`):
-   - Nếu bạn vừa đặt câu hỏi cho đối phương (VD: "Thuốc này uống lúc nào vậy chị?", "Có dùng chung với thuốc khác được không?", "Cho tôi hỏi thêm chút..."), bạn BẮT BUỘC đặt `conversation_end_requested = False` và `pending_question = True`.
-   - TUYỆT ĐỐI KHÔNG kết thúc chỉ vì đối phương vừa đưa thuốc hoặc nhắc tới tiền/thanh toán nếu bạn vẫn còn băn khoăn cần hỏi thêm.
+   - Nếu bạn vừa đặt câu hỏi cụ thể cho đối phương (VD: "Thuốc này uống lúc nào?", "Có dùng chung với thuốc khác được không?"), bạn BẮT BUỘC đặt `conversation_end_requested = False` và `pending_question = True`.
    - Người đi mua hàng ngoài đời hoàn toàn có thể trả tiền xong rồi mới sực nhớ ra để hỏi cách dùng: cuộc trò chuyện PHẢI TIẾP TỤC cho đến khi câu hỏi được giải đáp!
 
 {memory_block}
@@ -139,9 +144,9 @@ Người đang giao tiếp với bạn là: {scenario.user_role}.
 Hãy suy nghĩ như một con người thực tế và trả về kết quả JSON tuân thủ đúng Schema AgentResponse:
 {{
   "reply": "Lời nói đời thường của bạn (1-3 câu ngắn, tối đa {resp_style.hard_max_sentences} câu)",
-  "conversation_end_requested": bool (True nếu việc của bạn đã xong trọn vẹn và bạn muốn chào ra về; False nếu còn trao đổi hoặc vừa hỏi thêm),
-  "pending_question": bool (True nếu bạn vừa đặt câu hỏi cần đối phương giải đáp),
-  "pending_request": bool (True nếu còn yêu cầu nghiệp vụ chưa hoàn thành),
+  "conversation_end_requested": bool (True nếu việc của bạn đã xong HOẶC đã thống nhất hẹn báo lại sau; False nếu còn trao đổi hoặc vừa hỏi thêm),
+  "pending_question": bool (True nếu bạn vừa đặt câu hỏi cần đối phương giải đáp ngay),
+  "pending_request": bool (CHỈ đặt True nếu bạn đang yêu cầu đối phương thực hiện một thao tác ngay lập tức trong phiên chat này mà chưa xong. Nếu đã hẹn báo lại sau offline thì đặt False),
   "action_requested": null hoặc "Mã hành động bạn muốn đối phương thực hiện",
   "detected_event": null hoặc "helpful_response / irrelevant_question / customer_question_answered / payment_completed",
   "satisfaction": int (0-100, mức độ hài lòng thực tế với cách phục vụ),
