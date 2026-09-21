@@ -1,0 +1,134 @@
+{
+  "timestamp": "2026-09-18 22:05:40",
+  "scenario_file": "scenarios/customer_real_estate.md",
+  "scenario_title": "Tư vấn & Chốt sale Bất động sản",
+  "target_profile": {
+    "name": "Nguyễn Quốc Hoàng",
+    "age": 54,
+    "occupation": "Lập trình viên IT",
+    "personality": "Cẩn trọng, kỹ tính, thực tế, ghét sự vòng vo, tập trung vào số liệu và pháp lý.",
+    "background": "Tôi là kỹ sư phần mềm đã làm việc lâu năm, hiện đang chuẩn bị mua căn hộ để tích lũy tài sản cho con trai. Vì tính chất nghề nghiệp, tôi luôn yêu cầu sự chính xác cao trong mọi giao dịch và ghét những lời hứa hẹn mơ hồ.",
+    "chief_complaint": "Tôi đang tìm căn 2 phòng ngủ ở khu vực phía Tây, tài chính khoảng 3 tỷ rưỡi đổ lại cho con đi học. Bên bạn có dự án nào đã có sổ hoặc sắp bàn giao không, gửi tôi bảng giá chi tiết với.",
+    "interaction_type": "project_exploration",
+    "intent": "explore_options",
+    "behavior_policy": {
+      "response_style": {
+        "verbosity": "low",
+        "target_sentences": "2",
+        "hard_max_sentences": 4
+      },
+      "information_behavior": {
+        "spontaneous_disclosure": false,
+        "answer_when_asked": true,
+        "volunteer_extra_information": "low"
+      },
+      "interaction_behavior": {
+        "asks_questions_spontaneously": true,
+        "seeks_professional_advice": false,
+        "challenges_professional": true
+      },
+      "transaction_behavior": {
+        "wants_fast_transaction": true,
+        "leaves_after_completion": true
+      }
+    },
+    "context_facts": [
+      {
+        "id": "budget_flexibility",
+        "information": "Tôi có sẵn 2 tỷ, phần còn lại dự định vay ngân hàng hoặc chờ khoản tiết kiệm đáo hạn vào cuối năm nên cần lịch thanh toán giãn ra.",
+        "category": "financial",
+        "relevance": "high",
+        "disclosure": {
+          "spontaneous": false,
+          "when_asked_about": [
+            "tài chính",
+            "thanh toán",
+            "ngân hàng",
+            "vốn"
+          ]
+        }
+      },
+      {
+        "id": "previous_bad_experience",
+        "information": "Tôi từng mua dự án bị chậm tiến độ 2 năm nên giờ rất sợ các chủ đầu tư không uy tín, tôi cần xem kỹ tiến độ thực tế tại công trường.",
+        "category": "medical_history",
+        "relevance": "moderate",
+        "disclosure": {
+          "spontaneous": false,
+          "when_asked_about": [
+            "tiến độ",
+            "chủ đầu tư",
+            "pháp lý",
+            "rủi ro"
+          ]
+        }
+      }
+    ],
+    "hidden_secrets": [
+      "Đang âm thầm so sánh với một dự án khác của đối thủ cạnh tranh có giá rẻ hơn 200 triệu nhưng tiện ích kém hơn."
+    ],
+    "goal": "Tìm hiểu các căn phù hợp tài chính và nhu cầu sinh hoạt"
+  },
+  "conversation_logs": [
+    {
+      "turn": 0,
+      "tester_action": "NONE",
+      "tester_said": "Chào anh/chị, tôi là chuyên viên tư vấn bất động sản, anh/chị đang quan tâm đến dự án nào hay cần tìm căn hộ tiêu chí ra sao ạ?",
+      "target_said": "Tôi đang tìm căn 2 phòng ngủ ở khu vực phía Tây, tài chính khoảng 3 tỷ rưỡi đổ lại cho con đi học. Bên bạn có dự án nào đã có sổ hoặc sắp bàn giao không, gửi tôi bảng giá chi tiết với.",
+      "trust": 55,
+      "patience": 95,
+      "stress": 15,
+      "satisfaction": 90,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": false,
+      "termination_reason": "Hội thoại mới ở lượt 1/3, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
+    },
+    {
+      "turn": 1,
+      "tester_action": "SHOW_PROJECT",
+      "tester_said": "Với tầm tài chính 3,5 tỷ, anh/chị tham khảo dự án Lumière Evergreen, hiện đã cất nóc và chuẩn bị bàn giao, pháp lý đầy đủ. Đây là bảng giá chi tiết, mặt bằng căn 2PN và hồ sơ pháp lý dự án, anh/chị xem qua nhé.",
+      "target_said": "Tôi đã nhận được tài liệu, để tôi xem kỹ phần pháp lý và tiến độ thi công thực tế. Trước đây tôi từng gặp dự án chậm tiến độ nên khá kỹ tính, nếu cần làm rõ thêm các mốc thanh toán tôi sẽ hỏi bạn sau nhé.",
+      "trust": 70,
+      "patience": 95,
+      "stress": 35,
+      "satisfaction": 90,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": true,
+      "end_validated": false,
+      "pending_question": false,
+      "termination_reason": "Hội thoại mới ở lượt 2/3, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
+    },
+    {
+      "turn": 2,
+      "tester_action": "FOLLOW_UP_AGREED",
+      "tester_said": "Dạ vâng, anh cứ kiểm tra kỹ, cần hỗ trợ chi tiết về tiến độ hay lịch thanh toán thì cứ nhắn tôi nhé, cảm ơn anh. [FOLLOW_UP_AGREED] [DONE]",
+      "target_said": "Được rồi, tôi sẽ xem kỹ. Có gì vướng mắc về tiến độ hay lịch thanh toán tôi sẽ liên hệ lại sau.",
+      "trust": 80,
+      "patience": 95,
+      "stress": 15,
+      "satisfaction": 95,
+      "lifecycle_state": "COMPLETED",
+      "end_requested": true,
+      "end_validated": true,
+      "pending_question": false,
+      "termination_reason": "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Đã thống nhất phương án/xong việc và không còn thắc mắc dở dang."
+    }
+  ],
+  "evaluation": {
+    "out_of_character": false,
+    "dialogue_naturalness": 9,
+    "interaction_realism": 9,
+    "information_timing": 10,
+    "behavior_consistency": 10,
+    "transaction_realism": 9,
+    "termination_correctness": 10,
+    "unnecessary_turns": 0,
+    "premature_termination": false,
+    "abrupt_cutoff": false,
+    "emotion_logic_score": 10,
+    "unlock_turn": 1,
+    "critique": "Nhân vật thể hiện rất tốt tính cách kỹ tính, thực tế và đi thẳng vào vấn đề của một lập trình viên. Các phản hồi ngắn gọn, đúng trọng tâm và tuân thủ đúng chính sách hành vi. Việc chia sẻ bối cảnh về trải nghiệm xấu trong quá khứ ở lượt 1 rất tự nhiên, đúng thời điểm khi đang thảo luận về tiến độ. Hội thoại kết thúc trọn vẹn, chuyên nghiệp, không có sự vòng vo hay văn mẫu quảng cáo thừa thãi. Đây là một phiên tương tác rất thực tế."
+  }
+}

@@ -14,10 +14,16 @@ Hệ thống Kiểm thử Tự động 2 AI (LLM-vs-LLM) cho Generic Markdown Sc
 """
 
 import os
+import sys
 import json
 import time
 import argparse
 from typing import Dict, Any, List
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from google import genai
 from google.genai import types
 
@@ -371,6 +377,10 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
         "evaluation": eval_result
     }
 
+    report_dir = os.path.dirname(os.path.abspath(report_path))
+    if report_dir:
+        os.makedirs(report_dir, exist_ok=True)
+
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report_data, f, indent=2, ensure_ascii=False)
 
@@ -381,7 +391,7 @@ def run_automated_test(scenario_path: str = "scenarios/patient_pharmacy.md", rep
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run LLM-vs-LLM automated test on markdown scenario.")
     parser.add_argument("--scenario", type=str, default="scenarios/patient_pharmacy.md", help="Path to scenario .md file")
-    parser.add_argument("--output", type=str, default="test_report.json", help="Path to output report JSON file")
+    parser.add_argument("--output", type=str, default="tests/reports/test_report.json", help="Path to output report JSON file")
     args = parser.parse_args()
 
     run_automated_test(scenario_path=args.scenario, report_path=args.output)

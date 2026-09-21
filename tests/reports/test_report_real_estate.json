@@ -1,0 +1,134 @@
+{
+  "timestamp": "2026-09-18 17:40:26",
+  "scenario_file": "scenarios/customer_real_estate.md",
+  "scenario_title": "Tư vấn & Chốt sale Bất động sản",
+  "target_profile": {
+    "name": "Phạm Bảo Yến",
+    "age": 62,
+    "occupation": "Chủ chuỗi cửa hàng",
+    "personality": "Cởi mở, thẳng thắn, vui vẻ, thực tế",
+    "background": "Tôi là chủ một chuỗi cửa hàng bán lẻ lâu năm, hiện tại đã ổn định tài chính và muốn tìm một căn hộ cao cấp để dưỡng già hoặc cho con cháu ở. Tôi vốn là người làm kinh doanh nên luôn coi trọng sự minh bạch, rõ ràng trong mọi giao dịch.",
+    "chief_complaint": "Chào bạn, bên dự án The Landmark còn căn 2 phòng ngủ tầng trung nào không? Gửi giúp tôi bảng giá chi tiết để nếu ổn tôi qua xem thực tế luôn nhé.",
+    "interaction_type": "direct_unit_inquiry",
+    "intent": "check_specific_unit_and_schedule",
+    "behavior_policy": {
+      "response_style": {
+        "verbosity": "moderate",
+        "target_sentences": "2",
+        "hard_max_sentences": 4
+      },
+      "information_behavior": {
+        "spontaneous_disclosure": false,
+        "answer_when_asked": true,
+        "volunteer_extra_information": "low"
+      },
+      "interaction_behavior": {
+        "asks_questions_spontaneously": false,
+        "seeks_professional_advice": false,
+        "challenges_professional": false
+      },
+      "transaction_behavior": {
+        "wants_fast_transaction": true,
+        "leaves_after_completion": true
+      }
+    },
+    "context_facts": [
+      {
+        "id": "fact_0",
+        "information": "Đang có sẵn tiền mặt nhưng muốn kiểm tra kỹ chính sách chiết khấu thanh toán sớm trước khi quyết định xuống tiền.",
+        "category": "general",
+        "relevance": "high",
+        "disclosure": {
+          "spontaneous": false,
+          "when_asked_about": [
+            "bệnh nền",
+            "tiền sử",
+            "sức khỏe",
+            "thông tin"
+          ]
+        }
+      }
+    ],
+    "hidden_secrets": [
+      "Đang có sẵn tiền mặt nhưng muốn kiểm tra kỹ chính sách chiết khấu thanh toán sớm trước khi quyết định xuống tiền."
+    ],
+    "goal": "Xem thông tin căn hộ và chốt lịch xem nhà thực tế"
+  },
+  "conversation_logs": [
+    {
+      "turn": 0,
+      "tester_action": "NONE",
+      "tester_said": "Chào anh/chị, tôi là chuyên viên tư vấn bất động sản, anh/chị đang quan tâm tìm hiểu khu vực nào hoặc phân khúc căn hộ ra sao để tôi hỗ trợ thông tin nhanh nhất?",
+      "target_said": "Chào bạn, bên dự án The Landmark còn căn 2 phòng ngủ tầng trung nào không? Gửi giúp tôi bảng giá chi tiết để nếu ổn tôi qua xem thực tế luôn nhé.",
+      "trust": 55,
+      "patience": 95,
+      "stress": 5,
+      "satisfaction": 90,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": true,
+      "termination_reason": "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
+    },
+    {
+      "turn": 1,
+      "tester_action": "SHOW_PROJECT",
+      "tester_said": "The Landmark hiện còn vài căn 2PN tầng trung giá từ 4.5 tỷ, tôi đã gửi bảng giá và thiết kế chi tiết cho anh/chị, anh/chị xem qua rồi mình chốt lịch qua xem thực tế nhé?",
+      "target_said": "Tôi đã nhận được thông tin rồi, cảm ơn bạn. Nếu tôi thanh toán sớm 95% giá trị căn hộ thì bên mình có chính sách chiết khấu cụ thể thế nào, bạn cho tôi con số rõ ràng nhé?",
+      "trust": 75,
+      "patience": 85,
+      "stress": 20,
+      "satisfaction": 90,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": true,
+      "termination_reason": "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
+    },
+    {
+      "turn": 2,
+      "tester_action": "NONE",
+      "tester_said": "Nếu anh thanh toán sớm 95%, dự án đang áp dụng mức chiết khấu trực tiếp 8% trên giá bán, con số cụ thể sau chiết khấu cho căn 2PN sẽ giảm xuống còn khoảng 4.14 tỷ đồng.",
+      "target_said": "Mức chiết khấu này cũng khá ổn đấy. Vậy sáng mai khoảng 9 giờ, bạn có tiện dẫn tôi đi xem căn thực tế ở tầng trung không?",
+      "trust": 85,
+      "patience": 95,
+      "stress": 20,
+      "satisfaction": 100,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": true,
+      "termination_reason": "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
+    },
+    {
+      "turn": 3,
+      "tester_action": "AGREED_VIEWING",
+      "tester_said": "Sáng mai 9 giờ tôi sẽ có mặt tại sảnh dự án để dẫn anh đi xem căn thực tế tầng trung, hẹn gặp anh tại đó nhé. [AGREED_VIEWING] [DONE]",
+      "target_said": "Được rồi, vậy sáng mai 9 giờ gặp nhau ở sảnh dự án nhé. Cảm ơn bạn đã hỗ trợ nhanh chóng.",
+      "trust": 90,
+      "patience": 95,
+      "stress": 10,
+      "satisfaction": 100,
+      "lifecycle_state": "COMPLETED",
+      "end_requested": true,
+      "end_validated": true,
+      "pending_question": false,
+      "termination_reason": "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Mục tiêu hoàn tất, không còn thắc mắc dở dang."
+    }
+  ],
+  "evaluation": {
+    "out_of_character": false,
+    "dialogue_naturalness": 10,
+    "interaction_realism": 10,
+    "information_timing": 10,
+    "behavior_consistency": 10,
+    "transaction_realism": 10,
+    "termination_correctness": 10,
+    "unnecessary_turns": 0,
+    "premature_termination": false,
+    "abrupt_cutoff": false,
+    "emotion_logic_score": 10,
+    "unlock_turn": 1,
+    "critique": "Phiên hội thoại diễn ra cực kỳ tự nhiên và chuyên nghiệp. Nhân vật Phạm Bảo Yến thể hiện đúng phong thái của một người kinh doanh: đi thẳng vào vấn đề, yêu cầu thông tin minh bạch và quyết đoán. Agent (tester) phản hồi đúng trọng tâm, không dùng văn mẫu quảng cáo, cung cấp con số cụ thể về chiết khấu giúp xây dựng lòng tin nhanh chóng. Việc chốt lịch xem nhà diễn ra logic, đúng quy trình và kết thúc hội thoại rất gọn gàng, không kéo dài thừa thãi. Đây là một ví dụ mẫu mực về giao tiếp hiệu quả trong lĩnh vực bất động sản."
+  }
+}

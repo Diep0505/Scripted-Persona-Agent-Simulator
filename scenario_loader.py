@@ -27,7 +27,13 @@ def load_scenario_from_md(file_path: str) -> ScenarioSchema:
         ScenarioSchema: Đối tượng kịch bản đã qua kiểm duyệt Pydantic Schema với fallback an toàn.
     """
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Không tìm thấy file kịch bản tại đường dẫn: {file_path}")
+        # Thử tìm tương đối với thư mục gốc của project nếu script chạy từ thư mục con (vd: tests/)
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        alt_path = os.path.join(project_root, file_path)
+        if os.path.exists(alt_path):
+            file_path = alt_path
+        else:
+            raise FileNotFoundError(f"Không tìm thấy file kịch bản tại đường dẫn: {file_path}")
 
     # Đọc file markdown chứa frontmatter
     post = frontmatter.load(file_path)

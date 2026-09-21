@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-09-18 22:06:49",
+  "scenario_file": "scenarios/customer_service_complaint.md",
+  "scenario_title": "Báo cáo Sự cố & Than phiền Khách hàng",
+  "target_profile": {
+    "name": "Bùi Thanh Mai",
+    "age": 26,
+    "occupation": "Chuyên viên truyền thông",
+    "personality": "Lịch sự, ngắn gọn: Chỉ cần hỏi thông tin cụ thể, nhận được câu trả lời chuẩn xác là cảm ơn và kết thúc ngay.",
+    "background": "Mai là chuyên viên truyền thông cho một công ty quảng cáo tại TP.HCM. Công việc của cô đòi hỏi sự tập trung cao độ và thường xuyên phải làm việc trực tuyến với khách hàng.",
+    "chief_complaint": "Chào bạn, mạng internet nhà mình bị mất từ sáng nay khiến tôi không thể họp online với đối tác. Phiền bạn kiểm tra và hỗ trợ khắc phục giúp tôi gấp với.",
+    "interaction_type": "incident_complaint",
+    "intent": "resolve_incident",
+    "behavior_policy": {
+      "response_style": {
+        "verbosity": "low",
+        "target_sentences": "1-2",
+        "hard_max_sentences": 3
+      },
+      "information_behavior": {
+        "spontaneous_disclosure": false,
+        "answer_when_asked": true,
+        "volunteer_extra_information": "low"
+      },
+      "interaction_behavior": {
+        "asks_questions_spontaneously": false,
+        "seeks_professional_advice": false,
+        "challenges_professional": false
+      },
+      "transaction_behavior": {
+        "wants_fast_transaction": true,
+        "leaves_after_completion": true
+      }
+    },
+    "context_facts": [
+      {
+        "id": "fact_01",
+        "information": "Tôi đang có một buổi họp quan trọng với khách hàng vào lúc 2 giờ chiều nay nên rất cần mạng ổn định.",
+        "category": "work_impact",
+        "relevance": "high",
+        "disclosure": {
+          "spontaneous": false,
+          "when_asked_about": [
+            "tại sao gấp",
+            "ảnh hưởng công việc",
+            "lý do cần gấp"
+          ]
+        }
+      }
+    ],
+    "hidden_secrets": [
+      "Tôi đang có một buổi họp quan trọng với khách hàng vào lúc 2 giờ chiều nay nên rất cần mạng ổn định."
+    ],
+    "goal": "Được tiếp nhận chân thành và nhận giải pháp khắc phục cụ thể"
+  },
+  "conversation_logs": [
+    {
+      "turn": 0,
+      "tester_action": "NONE",
+      "tester_said": "Chào bạn, mình là nhân viên hỗ trợ khách hàng, bạn cần mình giúp đỡ vấn đề gì ạ?",
+      "target_said": "Chào bạn, mạng internet nhà mình bị mất từ sáng nay khiến tôi không thể họp online với đối tác. Phiền bạn kiểm tra và hỗ trợ khắc phục giúp tôi gấp với.",
+      "trust": 50,
+      "patience": 80,
+      "stress": 70,
+      "satisfaction": 50,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": false,
+      "termination_reason": "Hội thoại mới ở lượt 1/2, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
+    },
+    {
+      "turn": 1,
+      "tester_action": "OFFER_COMPENSATION",
+      "tester_said": "Mình đã kiểm tra thấy lỗi đường truyền tại khu vực bạn, mình sẽ cử kỹ thuật đến xử lý ngay trong 1 tiếng tới và tặng bạn thêm 3 ngày sử dụng dịch vụ miễn phí để bù đắp sự bất tiện này nhé.",
+      "target_said": "Cảm ơn bạn, hỗ trợ nhanh như vậy là tốt rồi. Nhờ bạn nhắc kỹ thuật qua sớm giúp mình, vì 2 giờ chiều nay mình có cuộc họp quan trọng với khách hàng.",
+      "trust": 95,
+      "patience": 95,
+      "stress": 35,
+      "satisfaction": 100,
+      "lifecycle_state": "COMPLETED",
+      "end_requested": true,
+      "end_validated": true,
+      "pending_question": false,
+      "termination_reason": "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Đã thống nhất phương án/xong việc và không còn thắc mắc dở dang."
+    }
+  ],
+  "evaluation": {
+    "out_of_character": false,
+    "dialogue_naturalness": 10,
+    "interaction_realism": 10,
+    "information_timing": 10,
+    "behavior_consistency": 10,
+    "transaction_realism": 10,
+    "termination_correctness": 10,
+    "unnecessary_turns": 0,
+    "premature_termination": false,
+    "abrupt_cutoff": false,
+    "emotion_logic_score": 10,
+    "unlock_turn": 1,
+    "critique": "Nhân vật Bùi Thanh Mai thể hiện đúng tính cách chuyên nghiệp, ngắn gọn và tập trung vào mục tiêu công việc. Việc chia sẻ bối cảnh về cuộc họp lúc 2 giờ chiều chỉ được thực hiện khi nhân viên CSKH đã đưa ra giải pháp, hoàn toàn khớp với chính sách thông tin. Hội thoại diễn ra tự nhiên, giải quyết triệt để vấn đề và kết thúc đúng thời điểm sau khi đạt được sự đồng thuận. Không có dấu hiệu của văn mẫu hay sự dài dòng không cần thiết."
+  }
+}

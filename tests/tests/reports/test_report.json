@@ -1,0 +1,120 @@
+{
+  "timestamp": "2026-09-21 11:48:30",
+  "scenario_file": "scenarios/patient_pharmacy.md",
+  "scenario_title": "Tư vấn & Cấp phát thuốc tại Nhà thuốc Thực tế",
+  "target_profile": {
+    "name": "Lê Phương Thảo",
+    "age": 32,
+    "occupation": "Nhân viên văn phòng",
+    "personality": "Mua theo thói quen, thẳng thắn, dứt khoát, ít nói, phong cách công nghiệp.",
+    "background": "Tôi là nhân viên văn phòng, công việc rất bận rộn và thường xuyên phải ngồi máy tính nhiều giờ. Tôi có tiền sử đau dạ dày do thói quen ăn uống thất thường và áp lực công việc.",
+    "chief_complaint": "Bán cho tôi vỉ thuốc giảm đau loại mạnh nhất với, đầu tôi đau như búa bổ không làm việc được.",
+    "interaction_type": "specific_request_with_risk",
+    "intent": "buy_requested_product",
+    "behavior_policy": {
+      "response_style": {
+        "verbosity": "low",
+        "target_sentences": "1-2",
+        "hard_max_sentences": 3
+      },
+      "information_behavior": {
+        "spontaneous_disclosure": false,
+        "answer_when_asked": true,
+        "volunteer_extra_information": "low"
+      },
+      "interaction_behavior": {
+        "asks_questions_spontaneously": false,
+        "seeks_professional_advice": false,
+        "challenges_professional": false
+      },
+      "transaction_behavior": {
+        "wants_fast_transaction": true,
+        "leaves_after_completion": true
+      }
+    },
+    "context_facts": [
+      {
+        "id": "stomach_ulcer_history",
+        "information": "Tôi có tiền sử bị viêm loét dạ dày mãn tính.",
+        "category": "medical_history",
+        "relevance": "high",
+        "disclosure": {
+          "spontaneous": false,
+          "when_asked_about": [
+            "dạ dày",
+            "bệnh nền",
+            "tiền sử bệnh",
+            "đau bụng",
+            "tiêu hóa"
+          ]
+        }
+      }
+    ],
+    "hidden_secrets": [
+      "Tôi có tiền sử bị viêm loét dạ dày mãn tính."
+    ],
+    "goal": "Tìm thuốc giảm đau hiệu quả nhưng an toàn cho người có tiền sử đau dạ dày."
+  },
+  "conversation_logs": [
+    {
+      "turn": 0,
+      "tester_action": "NONE",
+      "tester_said": "Chào bạn, nhà thuốc mình có thể giúp gì cho bạn hôm nay?",
+      "target_said": "Bán cho tôi vỉ thuốc giảm đau loại mạnh nhất với, đầu tôi đau như búa bổ không làm việc được.",
+      "trust": 50,
+      "patience": 90,
+      "stress": 80,
+      "satisfaction": 80,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": false,
+      "termination_reason": "Hội thoại mới ở lượt 1/2, chưa đủ số lượt trao đổi tối thiểu để kết thúc."
+    },
+    {
+      "turn": 1,
+      "tester_action": "NONE",
+      "tester_said": "Bạn có tiền sử đau dạ dày hay dị ứng với bất kỳ loại thuốc giảm đau nào không?",
+      "target_said": "Tôi có tiền sử bị viêm loét dạ dày mãn tính, nên bạn xem loại nào dùng được mà không hại dạ dày giúp tôi với nhé.",
+      "trust": 85,
+      "patience": 70,
+      "stress": 80,
+      "satisfaction": 90,
+      "lifecycle_state": "ACTIVE",
+      "end_requested": false,
+      "end_validated": false,
+      "pending_question": true,
+      "termination_reason": "Từ chối ngắt: Khách hàng vừa đặt một câu hỏi/thắc mắc cần được phản hồi tiếp."
+    },
+    {
+      "turn": 2,
+      "tester_action": "GIVE_MEDICINE",
+      "tester_said": "Bạn dùng Paracetamol 500mg, loại này an toàn cho dạ dày của bạn; uống 1 viên khi đau và cách nhau ít nhất 4-6 tiếng nhé. [PAYMENT] [DONE]",
+      "target_said": "Cảm ơn bạn, để tôi thanh toán luôn rồi về làm việc tiếp. Hy vọng uống vào đỡ đau ngay.",
+      "trust": 85,
+      "patience": 90,
+      "stress": 40,
+      "satisfaction": 95,
+      "lifecycle_state": "COMPLETED",
+      "end_requested": true,
+      "end_validated": true,
+      "pending_question": false,
+      "termination_reason": "Cuộc hội thoại đã kết thúc tự nhiên và trọn vẹn: Đã thống nhất phương án/xong việc và không còn thắc mắc dở dang."
+    }
+  ],
+  "evaluation": {
+    "out_of_character": false,
+    "dialogue_naturalness": 10,
+    "interaction_realism": 10,
+    "information_timing": 10,
+    "behavior_consistency": 10,
+    "transaction_realism": 10,
+    "termination_correctness": 10,
+    "unnecessary_turns": 0,
+    "premature_termination": false,
+    "abrupt_cutoff": false,
+    "emotion_logic_score": 10,
+    "unlock_turn": 1,
+    "critique": "Phiên hội thoại diễn ra cực kỳ tự nhiên và đúng với tính cách nhân vật. Nhân vật Thảo thể hiện đúng phong cách công nghiệp, dứt khoát, không lan man. Việc chia sẻ tiền sử bệnh dạ dày được thực hiện đúng lúc khi dược sĩ hỏi tới, không tự ý xả thông tin thừa. Quy trình tư vấn và thanh toán diễn ra nhanh chóng, hiệu quả, đúng với mục tiêu của một nhân viên văn phòng bận rộn. Kết thúc hội thoại trọn vẹn, không có lượt thoại thừa."
+  }
+}
